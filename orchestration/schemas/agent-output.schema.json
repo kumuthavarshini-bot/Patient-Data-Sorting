@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Agent handoff envelope",
+  "type": "object",
+  "required": ["runId", "stepId", "agentId", "agentVersion", "inputRefs", "outputRefs", "status"],
+  "properties": {
+    "runId": { "type": "string" },
+    "stepId": { "type": "string" },
+    "agentId": { "type": "string" },
+    "agentVersion": { "type": "string" },
+    "inputRefs": { "type": "array", "items": { "type": "string" } },
+    "outputRefs": { "type": "array", "items": { "type": "string" } },
+    "status": { "enum": ["PASSED", "NEEDS_REVIEW", "FAILED", "BLOCKED"] },
+    "findings": { "type": "array" }
+  }
+}

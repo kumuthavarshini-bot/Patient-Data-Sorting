@@ -1,0 +1,5 @@
+# Chatbot architecture
+
+Ask DataCare uses deterministic matching first. When no deterministic match is confident and AI matching is enabled, `demo-chat.js` sends only the chat question to the same-origin Node endpoint. The backend sends the question and eligible FAQ candidate metadata to the OpenAI Responses API and accepts only a structured FAQ ID or null. It validates the ID against the eligible allowlist and returns the exact approved answer from local JSON. It never sends FAQ answers or uploaded file contents to the model.
+
+`chat-core.js` validates the canonical 20-entry resource, filters any entry explicitly marked held, rejected, or under review, and drives deterministic matching and four stable recommendations from the source entries. The source JSON is unchanged. The static build and backend use the same entry-status filter. `.env` credentials are read only by `server.js` and are not copied into `dist/`. AI matching failures fall back safely without model-written answers. Uploaded file contents are not sent to the chatbot. Conversation history is page-session memory only.

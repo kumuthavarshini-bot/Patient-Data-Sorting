@@ -1,0 +1,15 @@
+{
+  "id": "customer-data-cleaner",
+  "version": "1.0.0",
+  "schemaVersion": "customer-schema-provisional-1",
+  "ruleVersion": "brd-rules-1",
+  "execution": ["upload", "profile", "mapping", "normalization", "validation", "exceptions", "import"],
+  "agents": [
+    { "id": "profile", "version": "1.0.0", "instruction": "agents/profile-agent.md", "skill": "skills/data-profiling.md" },
+    { "id": "mapping", "version": "1.0.0", "instruction": "agents/mapping-agent.md", "skill": "skills/field-mapping.md" },
+    { "id": "normalization", "version": "1.0.0", "instruction": "agents/normalization-agent.md", "skill": "skills/data-normalization.md" },
+    { "id": "validation", "version": "1.0.0", "instruction": "agents/validation-agent.md", "skill": "skills/deterministic-validation.md" },
+    { "id": "exception", "version": "1.0.0", "instruction": "agents/exception-agent.md", "skill": "skills/exception-management.md" }
+  ],
+  "controls": { "localOnly": true, "importEnabled": false, "mappingApprovalRequired": true, "invalidRowsImportable": false }
+}

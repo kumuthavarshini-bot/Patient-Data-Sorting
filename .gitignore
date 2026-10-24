@@ -1,0 +1,28 @@
+/.env
+/.env.*
+!/.env.example
+/dist/
+/runs/
+/node_modules/
+
+# Local and sensitive data files (keep synthetic tests under tests/fixtures tracked)
+/input/*.csv
+/input/*.tsv
+/input/*.txt
+/input/*.xlsx
+/input/*.xls
+/input/*.xlsm
+/input/*.ods
+/data/
+/uploads/
+/output/
+
+# Local credentials, logs, temporary files, and OS metadata
+*.pem
+*.key
+*.log
+*.tmp
+*.temp
+*.swp
+.DS_Store
+._*

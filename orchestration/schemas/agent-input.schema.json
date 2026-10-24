@@ -1,0 +1,13 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Agent input envelope",
+  "type": "object",
+  "required": ["runId", "stepId", "agentId", "inputs", "config"],
+  "properties": {
+    "runId": { "type": "string" },
+    "stepId": { "type": "string" },
+    "agentId": { "type": "string" },
+    "inputs": { "type": "array" },
+    "config": { "type": "object" }
+  }
+}

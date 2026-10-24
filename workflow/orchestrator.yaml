@@ -1,0 +1,81 @@
+workflow:
+  id: customer-data-cleaner
+  version: 0.1.0
+  status: scaffold
+  source_requirements: ../input/customer_data_cleaner_BRD.md
+  implementation_guide: missing
+  run_id_required: true
+  execution_order:
+    - upload
+    - profile
+    - mapping
+    - normalization
+    - validation
+    - exceptions
+    - import
+  states:
+    - Uploaded
+    - Profiled
+    - Mapping Review
+    - Normalized
+    - Validated
+    - Import Ready
+    - Completed
+    - Needs Review
+    - Failed
+    - Cancelled
+    - Partially Imported
+  controls:
+    sequential_dependencies: true
+    pause_on_required_human_decision: true
+    import_requires_explicit_confirmation: true
+    import_requires_all_blocking_gates_passed: true
+    retries:
+      transient_only: true
+      idempotent_side_effects_required: true
+    audit_fields:
+      - run_id
+      - phase_id
+      - agent_version
+      - schema_version
+      - rule_version
+      - started_at
+      - completed_at
+      - status
+  phases:
+    - id: upload
+      path: phases/01-upload
+      next: profile
+    - id: profile
+      path: phases/02-profile
+      next: mapping
+    - id: mapping
+      path: phases/03-mapping
+      next: normalization
+    - id: normalization
+      path: phases/04-normalization
+      next: validation
+    - id: validation
+      path: phases/05-validation
+      next: exceptions
+    - id: exceptions
+      path: phases/06-exceptions
+      next: import
+    - id: import
+      path: phases/07-import
+      next: null
+  agents:
+    profile: ../agents/profile-agent.md
+    mapping: ../agents/mapping-agent.md
+    normalization: ../agents/normalization-agent.md
+    validation: ../agents/validation-agent.md
+    exception: ../agents/exception-agent.md
+  skills:
+    - ../skills/csv-intake.md
+    - ../skills/data-profiling.md
+    - ../skills/field-mapping.md
+    - ../skills/data-normalization.md
+    - ../skills/deterministic-validation.md
+    - ../skills/exception-management.md
+    - ../skills/import-safety.md
+  unresolved_requirements: REQUIREMENTS.md

@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#176d58">
+  <title>Customer Data Cleaner — Live Demo</title>
+  <link rel="stylesheet" href="demo.css">
+  <script src="demo-core.js" defer></script>
+  <script src="spreadsheet-importer.js" defer></script>
+  <script src="demo.js" defer></script>
+  <script src="chat-core.js" defer></script>
+  <script src="demo-chat.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="Customer Data Cleaner AI Orchestration home">
+      <span class="brand-mark" aria-hidden="true">C</span><span>Customer Data Cleaner</span>
+    </a>
+    <nav aria-label="Main navigation">
+      <a href="index.html">AI Orchestration</a>
+      <a class="active" href="demo.html" aria-current="page">Live Demo</a>
+    </nav>
+  </header>
+  <main class="page-wrap">
+    <div class="breadcrumb"><a href="index.html">← Back to AI Orchestration</a><span> / </span><span>Live Demo</span></div>
+    <section class="intro">
+      <p class="eyebrow">BROWSER-LOCAL · SYNTHETIC OR AUTHORIZED DATA ONLY</p>
+      <h1>Customer Data Cleaner — Live Demo</h1>
+      <p class="lede">Preview, profile, map, normalize, and validate customer data from common spreadsheet and delimited-text files in this browser. This prototype does not upload files to a service or import records into a customer system.</p>
+      <div class="notice" role="note"><strong>Prototype limits</strong><span>Supported inputs: CSV, TSV, TXT, XLSX, XLS, XLSM, and ODS up to 25 MiB. Processing uses an illustrative schema: Customer ID requiredness and same-batch duplicate-ID handling are BRD-defined; exact field formats and other normalization policies remain provisional. This demo is not approved for sensitive data.</span></div>
+    </section>
+
+    <section class="card upload-card" aria-labelledby="uploadTitle">
+      <div class="section-heading"><div><span class="step">01</span><h2 id="uploadTitle">Upload a customer data file</h2></div><p>Data remains in this page session.</p></div>
+      <label class="drop-zone" id="dropZone" for="fileInput">
+        <span class="upload-icon" aria-hidden="true">↑</span>
+        <strong>Choose a spreadsheet or delimited-text file</strong><span>or drag and drop it here</span>
+        <small>Accepted: .csv · .tsv · .txt · .xlsx · .xls · .xlsm · .ods · 25 MiB maximum · files are not persisted</small>
+      </label>
+      <input id="fileInput" class="visually-hidden" type="file" accept=".csv,.tsv,.txt,.xlsx,.xls,.xlsm,.ods,text/csv,text/tab-separated-values,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,application/vnd.oasis.opendocument.spreadsheet">
+      <div id="fileStatus" class="status" role="status" aria-live="polite">No file selected.</div>
+      <div id="errorBox" class="error-box" role="alert" hidden></div>
+      <div class="import-options" id="importOptions" hidden>
+        <label id="worksheetControl" for="worksheetSelect" hidden>Worksheet<select id="worksheetSelect"></select></label>
+        <label for="headerRowInput">Header row (1-based)<input id="headerRowInput" type="number" min="1" step="1" value="1"></label>
+        <label id="delimiterControl" for="delimiterSelect" hidden>Delimiter<select id="delimiterSelect"><option value="auto">Auto-detect</option><option value=",">Comma</option><option value="&#9;">Tab</option><option value=";">Semicolon</option><option value="|">Pipe</option></select></label>
+      </div>
+      <div class="import-warnings" id="importWarnings" role="status" aria-live="polite" hidden></div>
+    </section>
+
+    <section class="card" id="previewSection" hidden aria-labelledby="previewTitle">
+      <div class="section-heading"><div><span class="step">02</span><h2 id="previewTitle">Preview source records</h2></div><button class="button secondary" id="replaceFile">Replace file</button></div>
+      <div class="summary-strip" id="fileSummary"></div>
+      <div id="sourcePreview" aria-label="Source file preview"></div>
+      <div class="preview-pagination" aria-label="Source preview pages"><button class="button secondary" id="previewPrevious" type="button">Previous rows</button><span id="previewPageInfo" class="caption" aria-live="polite"></span><button class="button secondary" id="previewNext" type="button">Next rows</button></div>
+      <p class="caption">Preview values are read-only. Use the row controls to inspect every parsed record; all imported rows remain available for profiling and processing.</p>
+    </section>
+
+    <section class="card" id="profileSection" hidden aria-labelledby="profileTitle">
+      <div class="section-heading"><div><span class="step">03</span><h2 id="profileTitle">Dataset profile</h2></div><button class="button secondary" id="profileButton" type="button">Re-run profile</button></div>
+      <div id="profileResults" class="profile-dashboard"><p class="empty-state">A local profile will be generated after the file is parsed.</p></div>
+      <section class="profile-actions" id="profileActions" aria-labelledby="profileDownloadsTitle" hidden>
+        <h3 id="profileDownloadsTitle">Download profile</h3>
+        <div class="action-row">
+          <button class="button secondary" id="downloadProfileSummary" type="button">Profile summary (.md)</button>
+          <button class="button secondary" id="downloadProfileJson" type="button">Detailed profile (.json)</button>
+          <button class="button secondary" id="downloadColumnQuality" type="button">Column quality (.csv)</button>
+          <button class="button secondary" id="downloadProfileFindings" type="button" hidden>Profile findings (.csv)</button>
+        </div>
+      </section>
+      <section class="column-quality" aria-labelledby="columnQualityTitle">
+        <details id="columnQualityDetails">
+          <summary id="columnQualityTitle">View all columns</summary>
+          <div class="column-quality-controls">
+            <label for="columnSearch">Search columns</label><input id="columnSearch" type="search" placeholder="Search by name">
+            <label for="columnSort">Sort</label><select id="columnSort"><option value="priority">Highest missing first</option><option value="name">Column name</option><option value="missing">Missing count</option><option value="status">Quality status</option></select>
+          </div>
+          <div id="columnQualityTable"></div>
+        </details>
+      </section>
+      <section class="recommended-actions" aria-labelledby="recommendedActionsTitle">
+        <h3 id="recommendedActionsTitle">Recommended actions</h3>
+        <div id="recommendedActions" class="recommendation-list" aria-live="polite"><p class="empty-state">Recommendations are based on the uploaded file.</p></div>
+      </section>
+    </section>
+
+    <section class="card" id="mappingSection" hidden aria-labelledby="mappingTitle">
+      <div class="section-heading"><div><span class="step">04</span><h2 id="mappingTitle">Map customer data</h2></div><span class="badge review">Human confirmation required</span></div>
+      <p class="section-copy">Review the required Customer ID mapping before processing. Suggestions use headers and observed values as evidence; they are heuristic and never count as approval. Optional fields are added only when needed. Source columns and values remain preserved.</p>
+      <div class="mapping-usecase">
+        <label for="mappingUseCase">Recommended mappings for your use case</label>
+        <select id="mappingUseCase">
+          <option value="">Choose a mapping use case…</option>
+          <option value="customer_identity">Customer identification</option>
+          <option value="contact">Contact information</option>
+          <option value="address">Address and location</option>
+          <option value="date">Date of birth (proposed optional field; approval required)</option>
+        </select>
+        <p class="caption" id="mappingUseCaseNote">Only fields supported by the current illustrative customer schema are offered. No patient, diagnosis, gender, or sex fields are inferred.</p>
+      </div>
+      <div class="mapping-recommendations" id="mappingRecommendations" aria-live="polite"></div>
+      <div class="mapping-summary" id="mappingSummary" role="status" aria-live="polite"></div>
+      <div id="mappingList" class="mapping-list"></div>
+      <button class="button secondary" id="addMapping" type="button">+ Add another mapping</button>
+      <button class="button secondary" id="addHighConfidenceMappings" type="button">Add high-confidence optional suggestions</button>
+      <div class="action-row"><button class="button primary" id="cleanButton" disabled>Clean and Validate</button><span class="caption" id="mappingStatus" role="status" aria-live="polite">Profile the file to begin mapping.</span></div>
+    </section>
+
+    <section class="card" id="filterSection" hidden aria-labelledby="filterTitle">
+      <div class="section-heading"><div><span class="step">05</span><h2 id="filterTitle">Choose filters</h2></div><button class="button secondary" id="resetFilters" type="button">Reset filters</button></div>
+      <p class="section-copy">Filters match exact source values after trimming whitespace and ignoring letter case. Repeated values on one column are alternatives; filters on different columns combine. Filters change the filtered view and related downloads; the cleaned full-dataset export remains separate.</p>
+      <div class="filter-controls">
+        <label for="filterColumn">Source column</label><select id="filterColumn"><option value="">Choose a source column…</option></select>
+        <label for="filterValue">Exact value</label><input id="filterValue" type="text" autocomplete="off" placeholder="For example, Newark">
+        <button class="button secondary" id="addFilter" type="button">Add filter value</button>
+      </div>
+      <div class="filter-quality-row"><label for="qualityFilter">Record status</label><select id="qualityFilter"><option value="all">All processed records</option><option value="valid">Valid only</option><option value="needs_review">Needs review</option><option value="invalid">Invalid only</option><option value="missing_id">Missing Customer ID</option><option value="duplicate_id">Duplicate Customer ID</option></select></div>
+      <div class="active-filter-list" id="activeFilters" aria-live="polite"><span class="caption">No active filters. All uploaded records will be included in the filtered view.</span></div>
+      <div class="status" id="filterStatus" role="status" aria-live="polite">Configure optional filters before processing.</div>
+    </section>
+
+    <section class="card" id="resultsSection" hidden aria-labelledby="resultsTitle">
+      <div class="section-heading"><div><span class="step">06</span><h2 id="resultsTitle">Cleaning and validation results</h2></div><span class="badge provisional">Illustrative rules</span></div>
+      <p class="section-copy">Original source cells are retained beside canonical values. Customer ID absence and same-batch duplicates are blocking checks. A basic email check and non-ISO date screening are review-only; no date conversion occurs. Whitespace-only cells become empty after recorded trimming; tokens such as N/A and NULL remain literal text. Phone, address, other null-token, and optional-field policies remain unconfigured. This demo does not import records.</p>
+      <div class="metric-grid" id="metrics"></div>
+      <p class="status" id="resultStatus" role="status" aria-live="polite"></p>
+      <div class="results-tabs" role="tablist" aria-label="Record outcomes">
+        <button class="tab active" id="validTab" role="tab" tabindex="0" aria-selected="true" aria-controls="validPane">Eligible in demo</button>
+        <button class="tab" id="filteredTab" role="tab" tabindex="-1" aria-selected="false" aria-controls="filteredPane">Filtered records</button>
+        <button class="tab" id="exceptionTab" role="tab" tabindex="-1" aria-selected="false" aria-controls="exceptionPane">Exceptions &amp; review</button>
+        <button class="tab" id="changesTab" role="tab" tabindex="-1" aria-selected="false" aria-controls="changesPane">Changes</button>
+      </div>
+      <div id="validPane" class="tab-pane" role="tabpanel" aria-labelledby="validTab"></div>
+      <div id="filteredPane" class="tab-pane" role="tabpanel" aria-labelledby="filteredTab" hidden></div>
+      <div id="exceptionPane" class="tab-pane" role="tabpanel" aria-labelledby="exceptionTab" hidden></div>
+      <div id="changesPane" class="tab-pane" role="tabpanel" aria-labelledby="changesTab" hidden></div>
+      <div class="action-row download-row">
+        <button class="button secondary" id="downloadClean">Download full cleaned CSV</button>
+        <button class="button secondary" id="downloadFiltered">Download filtered CSV</button>
+        <button class="button secondary" id="downloadValidation">Download validation report CSV</button>
+        <button class="button secondary" id="downloadFilteredValidation">Download filtered validation CSV</button>
+        <button class="button secondary" id="downloadExceptions">Download exception report CSV</button>
+        <button class="button secondary" id="downloadSummary">Download processing summary JSON</button>
+        <button class="button secondary" id="downloadXlsx">Download reports workbook (.xlsx)</button>
+      </div>
+      <p class="caption">“Valid” means no configured blocking or review finding was raised by this demo. It is not an import approval or production validation result. Formula-like cells are prefixed in CSV downloads to reduce spreadsheet formula execution risk; in-memory source values remain unchanged.</p>
+    </section>
+    <footer>Customer Data Cleaner prototype · Uploaded files stay in your browser · Optional AI matching sends unmatched chat questions only</footer>
+  </main>
+  <button class="assistant-launcher" id="assistantLauncher" type="button" aria-controls="assistantPanel" aria-expanded="false" aria-label="Open Ask DataCare">
+    <span class="assistant-launcher-mark" aria-hidden="true">✦</span><span>Ask DataCare</span>
+  </button>
+  <section class="assistant-panel" id="assistantPanel" role="region" aria-labelledby="assistantTitle" hidden>
+    <header class="assistant-head">
+      <div class="assistant-head-mark" aria-hidden="true">✦</div>
+      <div class="assistant-head-copy"><strong id="assistantTitle">Ask DataCare</strong><span>Approved predefined guidance</span></div>
+      <button class="assistant-close" id="assistantClose" type="button" aria-label="Close Ask DataCare">×</button>
+    </header>
+    <div class="assistant-messages" id="assistantMessages" role="log" aria-label="Ask DataCare conversation" aria-live="polite" aria-relevant="additions text">
+      <div class="assistant-message bot"><span class="assistant-message-label">DataCare</span>Welcome! I can help you understand this customer data-cleaning demo. I use approved predefined guidance; I can’t infer data policies or claim that a file was cleaned or imported. If AI matching is enabled, only unmatched questions are sent to OpenAI to select approved guidance. Do not include customer data.</div>
+    </div>
+    <p class="assistant-review-note" id="assistantReviewNote" hidden></p>
+    <section class="assistant-recommendation-section" aria-labelledby="assistantRecommendationsTitle">
+      <h3 id="assistantRecommendationsTitle">Recommendations</h3>
+      <div class="assistant-suggestions" id="assistantSuggestions" role="group" aria-labelledby="assistantRecommendationsTitle" aria-live="polite">
+        <p class="assistant-suggestions-empty">Loading approved questions…</p>
+      </div>
+    </section>
+    <div class="assistant-location-tools" id="assistantLocationTools" hidden>
+      <label for="assistantLocationColumn">Choose the column containing locations</label>
+      <select id="assistantLocationColumn" aria-label="Location data column"></select>
+      <button class="assistant-location-count" id="assistantLocationCount" type="button">Count using this column</button>
+    </div>
+    <div class="assistant-status" id="assistantStatus" role="status" aria-live="polite">Loading approved questions…</div>
+    <form class="assistant-form" id="assistantForm">
+      <label class="visually-hidden" for="assistantInput">Ask DataCare a question</label>
+      <input class="assistant-input" id="assistantInput" type="text" autocomplete="off" placeholder="Ask about the demo…" aria-label="Ask DataCare a question" disabled>
+      <button class="assistant-send" id="assistantSend" type="submit" aria-label="Send question" disabled>↑</button>
+    </form>
+  </section>
+</body>
+</html>

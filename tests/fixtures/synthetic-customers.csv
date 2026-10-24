@@ -1,0 +1,5 @@
+Customer ID,Name,Email
+C-1001,Sample Customer One,ONE@example.test
+C-1002,Sample Customer Two,two@example.test
+,Missing Identifier,missing@example.test
+C-1002,Duplicate Identifier,dupe@example.test

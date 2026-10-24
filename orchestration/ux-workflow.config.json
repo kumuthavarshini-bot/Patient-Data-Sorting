@@ -1,0 +1,17 @@
+{
+  "id": "customer-data-cleaner-ux-evidence",
+  "version": "1.0.0",
+  "stages": [
+    { "id": "problem-definition-product-brief", "outputs": ["artifacts/00-problem-definition/problem-brief.md", "artifacts/00-problem-definition/assumptions-and-risks.md", "artifacts/00-problem-definition/requirements.md", "artifacts/00-problem-definition/success-metrics.md"], "execution": "validate BRD-derived problem artifacts and provenance labels" },
+    { "id": "research-planning", "outputs": ["artifacts/01-research/research-plan.md"], "execution": "validate research plan; participant research is not run by this tool" },
+    { "id": "research-evidence-collection", "outputs": ["artifacts/01-research/desk-research.md", "artifacts/01-research/competitor-analysis.md", "artifacts/01-research/evidence-register.md"], "execution": "validate source register and explicit no-research labels" },
+    { "id": "personas-and-jobs", "outputs": ["artifacts/02-discovery/personas.md", "artifacts/02-discovery/jobs-to-be-done.md"], "execution": "validate BRD-derived persona and JTBD hypotheses" },
+    { "id": "journeys-and-task-flows", "outputs": ["artifacts/02-discovery/user-journeys.md", "artifacts/02-discovery/task-flows.md"], "execution": "validate decision flow and import boundary" },
+    { "id": "information-architecture", "outputs": ["artifacts/03-design/information-architecture.md"], "execution": "validate page and workflow separation" },
+    { "id": "interaction-design-and-system", "outputs": ["artifacts/03-design/design-decisions.md", "artifacts/03-design/interaction-specification.md", "artifacts/03-design/design-system.md", "artifacts/03-design/accessibility-review.md"], "execution": "validate source inventory and accessibility evidence status" },
+    { "id": "prototype-implementation", "outputs": ["artifacts/04-implementation/technical-design.md", "artifacts/04-implementation/implementation-report.md"], "execution": "validate code implementation reports against local source inventory" },
+    { "id": "usability-qa-iteration", "outputs": ["artifacts/05-evaluation/usability-test-plan.md", "artifacts/05-evaluation/usability-findings.md", "artifacts/05-evaluation/qa-report.md", "artifacts/05-evaluation/iteration-log.md"], "execution": "validate test plan and do not infer findings from absent sessions" },
+    { "id": "final-product-evidence-review", "outputs": ["artifacts/04-implementation/agent-to-feature-traceability.md", "artifacts/06-final/executive-summary.md", "artifacts/06-final/certification-evidence-index.md"], "execution": "validate evidence index and documented limitations" }
+  ],
+  "notes": "The seven documented UX artifact stages are separate from the dashboard's seven product-planning phases and the CSV-processing workflow. This audit does not claim external research, interviews, or usability execution."
+}

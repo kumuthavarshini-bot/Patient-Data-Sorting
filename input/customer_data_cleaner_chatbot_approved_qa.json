@@ -1,0 +1,258 @@
+{
+  "metadata": {
+    "name": "DataCare AI Assistant Knowledge Base",
+    "application": "Customer Data Cleaner",
+    "version": "1.0.0",
+    "status": "approved_by_user",
+    "description": "Approved predefined Q&A for workflow guidance. Answers distinguish planned capabilities from implemented behavior.",
+    "language": "en-US",
+    "entry_count": 20
+  },
+  "entries": [
+    {
+      "id": "faq_001",
+      "question": "What does Customer Data Cleaner do?",
+      "answer": "Customer Data Cleaner helps transform inconsistent customer and patient records into standardized, validated, and more reliable data through a guided workflow. Actual processing depends on the connected data sources and implemented integrations.",
+      "category": "overview",
+      "keywords": [
+        "customer data",
+        "patient records",
+        "cleaning",
+        "standardization",
+        "validation"
+      ]
+    },
+    {
+      "id": "faq_002",
+      "question": "How do I get started?",
+      "answer": "Start with Problem & Product Definition. Confirm the business goal, data sources, stakeholders, and success metrics. Then proceed through the roadmap, research, analysis, design, validation, and handover phases.",
+      "category": "getting_started",
+      "keywords": [
+        "start",
+        "getting started",
+        "first step",
+        "workflow"
+      ]
+    },
+    {
+      "id": "faq_003",
+      "question": "What are the seven workflow phases?",
+      "answer": "The seven phases are Problem & Product Definition, Roadmap to Get Started, Research, Analyze, Design, Validation, and Handover. Each phase should produce defined outputs and pass its approval gate before dependent work proceeds.",
+      "category": "workflow",
+      "keywords": [
+        "seven phases",
+        "workflow",
+        "roadmap",
+        "approval gate"
+      ]
+    },
+    {
+      "id": "faq_004",
+      "question": "What is the Profile Agent?",
+      "answer": "The Profile Agent examines the structure and quality of source data, including field types, missing values, duplicate candidates, format patterns, and potential anomalies. Findings should be based on actual data supplied to the agent.",
+      "category": "agents",
+      "keywords": [
+        "profile agent",
+        "profiling",
+        "field types",
+        "missing values",
+        "anomalies"
+      ]
+    },
+    {
+      "id": "faq_005",
+      "question": "What is the Mapping Agent?",
+      "answer": "The Mapping Agent proposes how source fields correspond to the target schema. Ambiguous or low-confidence mappings should be flagged for human review instead of silently choosing a destination.",
+      "category": "agents",
+      "keywords": [
+        "mapping agent",
+        "field mapping",
+        "target schema",
+        "ambiguous mapping"
+      ]
+    },
+    {
+      "id": "faq_006",
+      "question": "What is the Normalization Agent?",
+      "answer": "The Normalization Agent applies approved rules to standardize values, such as date formats, whitespace, capitalization, and permitted category values. Original values should be preserved for traceability.",
+      "category": "agents",
+      "keywords": [
+        "normalization agent",
+        "standardize",
+        "date formats",
+        "original values"
+      ]
+    },
+    {
+      "id": "faq_007",
+      "question": "What is the Validation Agent?",
+      "answer": "The Validation Agent checks records against configured schema requirements, required fields, data types, allowed values, and business rules. It should report pass, fail, or review-required outcomes with reasons.",
+      "category": "agents",
+      "keywords": [
+        "validation agent",
+        "schema",
+        "business rules",
+        "validation results"
+      ]
+    },
+    {
+      "id": "faq_008",
+      "question": "What is the Exception Agent?",
+      "answer": "The Exception Agent organizes records that cannot be safely resolved automatically, explains the reason, and routes them for human review. It should not invent missing patient information.",
+      "category": "agents",
+      "keywords": [
+        "exception agent",
+        "exceptions",
+        "human review",
+        "missing information"
+      ]
+    },
+    {
+      "id": "faq_009",
+      "question": "How are duplicate records identified?",
+      "answer": "Duplicates can be identified using approved matching rules and available identifiers. Similar names alone may not prove that two records belong to the same person. Uncertain matches should be reviewed before merging.",
+      "category": "data_quality",
+      "keywords": [
+        "duplicates",
+        "duplicate records",
+        "matching",
+        "merge"
+      ]
+    },
+    {
+      "id": "faq_010",
+      "question": "How are missing values handled?",
+      "answer": "Missing values are flagged according to field requirements and approved rules. The system should not fabricate patient details. Any permitted default or derivation must be explicitly configured and documented.",
+      "category": "data_quality",
+      "keywords": [
+        "missing values",
+        "required fields",
+        "defaults",
+        "data quality"
+      ]
+    },
+    {
+      "id": "faq_011",
+      "question": "What happens when a field cannot be mapped?",
+      "answer": "The record or field is flagged as unresolved. A user reviews the proposed mapping, selects an approved destination or exclusion, and confirms the decision before processing continues.",
+      "category": "mapping",
+      "keywords": [
+        "unmapped field",
+        "mapping issue",
+        "unresolved",
+        "review"
+      ]
+    },
+    {
+      "id": "faq_012",
+      "question": "Can I undo a normalization change?",
+      "answer": "The intended design should retain the original value, transformed value, applied rule, and processing history so changes can be audited or reversed where supported. Reversal must be implemented and tested before it is promised as a live capability.",
+      "category": "normalization",
+      "keywords": [
+        "undo",
+        "revert",
+        "normalization",
+        "audit trail",
+        "original value"
+      ]
+    },
+    {
+      "id": "faq_013",
+      "question": "What does the validation gate mean?",
+      "answer": "A validation gate is a checkpoint that must be satisfied before the workflow proceeds. Failed records, unresolved mappings, and outstanding approvals must be handled according to the configured acceptance criteria.",
+      "category": "validation",
+      "keywords": [
+        "validation gate",
+        "checkpoint",
+        "approval",
+        "acceptance criteria"
+      ]
+    },
+    {
+      "id": "faq_014",
+      "question": "Can invalid records be imported?",
+      "answer": "Records that fail mandatory validation should not be marked ready for import. They should be blocked or quarantined according to the approved policy until corrected or explicitly resolved through an authorized exception process.",
+      "category": "validation",
+      "keywords": [
+        "invalid records",
+        "import",
+        "blocked",
+        "quarantine"
+      ]
+    },
+    {
+      "id": "faq_015",
+      "question": "What reports will I receive?",
+      "answer": "The planned outputs may include a data profiling report, mapping decisions, normalization logs, validation results, exception queues, and a final handover report. Available reports depend on what the application actually implements.",
+      "category": "reports",
+      "keywords": [
+        "reports",
+        "profiling report",
+        "normalization log",
+        "handover report"
+      ]
+    },
+    {
+      "id": "faq_016",
+      "question": "What does the human approval step do?",
+      "answer": "Human approval confirms decisions that require business judgment, such as ambiguous field mappings, uncertain duplicate matches, exceptions, and release readiness. Approval status should be recorded before the next gated step.",
+      "category": "approvals",
+      "keywords": [
+        "human approval",
+        "mapping approval",
+        "duplicate review",
+        "release readiness"
+      ]
+    },
+    {
+      "id": "faq_017",
+      "question": "Can the chatbot clean my data directly?",
+      "answer": "The chatbot can explain the process and, if implemented, help initiate supported actions. It cannot claim to clean, validate, or import records unless the corresponding backend functionality is connected and confirms success.",
+      "category": "chatbot_capabilities",
+      "keywords": [
+        "chatbot",
+        "clean data",
+        "process records",
+        "import"
+      ]
+    },
+    {
+      "id": "faq_018",
+      "question": "Can I upload a CSV or Excel file?",
+      "answer": "File upload depends on the application's configured import functionality. If supported, use an approved template and verify the expected columns and formats. Do not upload real patient data to an unapproved environment.",
+      "category": "file_upload",
+      "keywords": [
+        "upload",
+        "CSV",
+        "Excel",
+        "file import",
+        "template"
+      ]
+    },
+    {
+      "id": "faq_019",
+      "question": "Is patient data safe to use with the chatbot?",
+      "answer": "Use only approved environments and data sources. Do not enter real patient identifiers or protected health information into the chatbot unless the system has been reviewed and authorized for that use, with appropriate access controls, retention, and provider agreements.",
+      "category": "privacy_security",
+      "keywords": [
+        "patient data",
+        "privacy",
+        "PHI",
+        "security",
+        "approved environment"
+      ]
+    },
+    {
+      "id": "faq_020",
+      "question": "What if you don't know the answer?",
+      "answer": "I couldn't confidently answer that from the approved guidance. I can explain the relevant workflow phase or direct you to the appropriate data owner or administrator. I won't invent a policy or claim an action has succeeded.",
+      "category": "fallback",
+      "keywords": [
+        "unknown question",
+        "fallback",
+        "uncertain",
+        "help"
+      ]
+    }
+  ]
+}
