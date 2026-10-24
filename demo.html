@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#163B65">
   <title>Patient Data Sorting — Live Demo</title>
+  <link rel="stylesheet" href="styles/design-tokens.css">
   <link rel="stylesheet" href="demo.css">
   <script src="demo-core.js" defer></script>
   <script src="spreadsheet-importer.js" defer></script>
@@ -12,51 +13,31 @@
   <script src="chat-core.js" defer></script>
   <script src="demo-chat.js" defer></script>
 </head>
-<body class="reference-preview">
-  <header class="site-header">
-    <a class="brand" href="index.html" aria-label="Customer Data Cleaner AI Orchestration home">
-      <span class="brand-mark" aria-hidden="true">P</span><span>Patient Data Sorting</span>
-    </a>
-    <nav aria-label="Main navigation">
-      <a href="index.html">AI Orchestration</a>
-      <a class="active" href="demo.html" aria-current="page">Live Demo</a>
-    </nav>
-  </header>
+<body>
+  <header class="topnav"><div class="nav-inner"><a class="wordmark" href="index.html" aria-label="Patient Data Sorting home">Patient Data Sorting</a><nav class="navlinks" aria-label="Main navigation"><a href="index.html">AI Orchestration</a><a class="demo-link" href="demo.html" aria-current="page">Live Demo</a></nav></div></header>
   <main class="page-wrap">
-    <div class="breadcrumb"><a href="index.html">← Back to AI Orchestration</a><span> / </span><span>Live Demo</span></div>
+
     <section class="intro">
-      <p class="eyebrow">BROWSER-LOCAL · SYNTHETIC OR AUTHORIZED DATA ONLY</p>
-      <h1>Customer Data Cleaner — Live Demo</h1>
-      <p class="lede">Preview, profile, map, normalize, and validate customer data from common spreadsheet and delimited-text files in this browser. This prototype does not upload files to a service or import records into a customer system.</p>
-      <div class="notice" role="note"><strong>Prototype limits</strong><span>Supported inputs: CSV, TSV, TXT, XLSX, XLS, XLSM, and ODS up to 25 MiB. Processing uses an illustrative schema: Customer ID requiredness and same-batch duplicate-ID handling are BRD-defined; exact field formats and other normalization policies remain provisional. This demo is not approved for sensitive data.</span></div>
+      <div class="breadcrumb"><a href="index.html">← Back to AI Orchestration</a></div>
+      <p class="eyebrow">BROWSER-LOCAL · NO FILE UPLOAD TO A SERVICE</p>
+      <h1>Upload your data</h1>
+      <p class="lede">Upload a spreadsheet to inspect its structure, review data-quality findings, approve supported formatting changes, and download results.</p>
+      <div class="notice" role="note"><strong>Prototype limits</strong><span>Supported: CSV, TSV, TXT, XLSX, XLS, XLSM, and ODS up to 25 MiB. Files stay in this browser session. Processing follows the existing customer schema, including its required Customer ID. Patient-specific identifiers and policies are not implemented; do not use patient or PHI data.</span></div>
     </section>
 
     <nav class="workflow-stepper" id="workflowStepper" aria-label="Data cleaning steps">
-      <button class="workflow-step active" id="stepCheck" type="button" aria-current="step"><span>1</span> Check</button>
-      <button class="workflow-step" id="stepFix" type="button" disabled><span>2</span> Fix</button>
-      <button class="workflow-step" id="stepExport" type="button" disabled><span>3</span> Export</button>
+      <button class="workflow-step active" id="stepUpload" type="button" aria-current="step"><span>1</span> Upload</button>
+      <button class="workflow-step" id="stepCheck" type="button" disabled><span>2</span> Check</button>
+      <button class="workflow-step" id="stepFix" type="button" disabled><span>3</span> Fix</button>
+      <button class="workflow-step" id="stepExport" type="button" disabled><span>4</span> Export</button>
     </nav>
 
-    <div class="patient-reference-shell" id="patientReferenceShell" aria-label="Illustrative patient-data reference preview">
-      <div class="reference-banner"><strong>Synthetic reference preview</strong><span>Illustrative values stay separate from the live upload workflow.</span><button class="button secondary" id="referenceAskAssistant" type="button">Ask DataCare</button><button class="button secondary" id="referenceChangeFile" type="button">Use my file</button></div>
-      <nav class="patient-stepper" aria-label="Patient data workflow"><button class="patient-step current" data-view="check" type="button">1 <span>Check</span></button><button class="patient-step" data-view="fix" type="button">2 <span>Fix</span></button><button class="patient-step" data-view="export" type="button">3 <span>Export</span></button></nav>
-      <section class="patient-view" data-panel="check"><div class="patient-file-strip"><span class="file-icon">▤</span><div><strong>patient_data_100.xlsx</strong><small>Sheet: Patients · Synthetic example · 134 illustrative records · 32 columns</small></div><button class="text-button" id="referenceChangeFileLink" type="button">Change file</button></div>
-        <div class="patient-check-grid"><section class="patient-card patient-summary"><p class="eyebrow">CHECK YOUR FILE</p><h2>We checked 134 patient records</h2><p class="patient-lede">Most of your file is usable. 7 issues need a decision before you export.</p><div class="patient-stats"><article><strong>58</strong><span>Ready</span></article><article><strong>49</strong><span>We can fix</span></article><article><strong>23</strong><span>Needs your eye</span></article><article><strong>4</strong><span>Can’t fix here</span></article></div><p class="illustrative-note">Counts and sample content are illustrative reference values, not computed results.</p><button class="button primary" data-go="fix" type="button">Start fixing <span aria-hidden="true">→</span></button> <button class="button secondary" data-go="export" type="button">Export as-is</button></section>
-          <section class="patient-card"><div class="patient-card-heading"><div><p class="eyebrow">WHAT WE FOUND</p><h2>7 issues to review</h2></div><button class="text-button" data-go="fix" type="button">See all</button></div><div class="finding-list"><button class="finding-item" data-go="fix"><span class="finding-symbol warning">!</span><span><strong>Date of birth formats</strong><small>41 values · Mixed formats</small></span><span class="finding-example">01.10.1940 → ?</span></button><button class="finding-item" data-go="fix"><span class="finding-symbol warning">!</span><span><strong>Gender inconsistent</strong><small>38 values · 1 needs review</small></span><span class="finding-example">W → Female</span></button><button class="finding-item" data-go="fix"><span class="finding-symbol info">↔</span><span><strong>Patient ID formats</strong><small>19 values</small></span><span class="finding-example">76 → ?</span></button><button class="finding-item" data-go="fix"><span class="finding-symbol error">×</span><span><strong>Age / DOB mismatch</strong><small>2 records</small></span><span class="finding-example">Needs a decision</span></button><button class="finding-item" data-go="fix"><span class="finding-symbol error">×</span><span><strong>Missing MRN</strong><small>1 record</small></span><span class="finding-example">Cannot infer</span></button><button class="finding-more" data-go="fix" type="button">+ 2 more · Name typos, marital status shorthand</button></div></section>
-          <section class="patient-card patient-mapping"><div class="patient-card-heading"><div><p class="eyebrow">FIELD MAPPING</p><h2>Columns we recognized</h2></div><span class="badge good">5 mapped</span></div><div class="mapping-preview"><div><span>Record ID</span><b>→</b><strong>Patient ID</strong><button type="button" data-reference-map="Record ID">Change</button></div><div><span>MRN</span><b>→</b><strong>MRN</strong><button type="button" data-reference-map="MRN">Change</button></div><div><span>Full name</span><b>→</b><strong>Patient Name</strong><button type="button" data-reference-map="Full name">Change</button></div><div><span>Date of birth</span><b>→</b><strong>Date of Birth</strong><button type="button" data-reference-map="Date of birth">Change</button></div><div><span>Gender</span><b>→</b><strong>Gender</strong><button type="button" data-reference-map="Gender">Change</button></div></div><p class="patient-footnote">27 other columns kept · Mapping shown here is illustrative and does not configure the processing engine.</p><button class="text-button" type="button" data-go="real-file">See column details and profile downloads</button><p class="optional-blanks"><strong>Optional blanks:</strong> Alcohol Use 40 · Notes 36 · Allergies 15</p></section></div></section>
-      <section class="patient-view" data-panel="fix" hidden><div class="patient-fix-layout"><section class="patient-card"><div class="patient-card-heading"><div><p class="eyebrow">FIX · 7 ISSUES</p><h2>Review each change</h2></div><span class="badge good">1 of 7 complete</span></div><p class="patient-lede">Every change shows a before and after. Nothing changes in your file until you approve it.</p><article class="completed-issue-card"><div><span class="eyebrow">COMPLETED · GENDER</span><strong>37 records changed</strong><small>Female, F, W → Female · Male, M → Male · 1 value needs review</small></div><button class="text-button" id="referenceUndoGender" type="button">Undo</button></article><article class="issue-review-card"><div class="issue-topline"><div><p class="eyebrow">DATE OF BIRTH FORMATS · 41 AFFECTED</p><h3>Which format are these dates in?</h3></div><span class="badge review">1 needs review</span></div><div class="date-examples"><div><span>Anjali Pttel · PT-087</span><code>January 29 1987</code><b>→</b><code>1987-01-29</code></div><div><span>Maria Thompsoo · P0099</span><code>Apr 19, 1953</code><b>→</b><code>1953-04-19</code></div><div><span>Luis Dubots · 76</span><code>June 06 2006</code><b>→</b><code>2006-06-06</code></div><div><span>James Brown · P0033</span><code>01.10.1940</code><b>→</b><strong>Which date?</strong></div><div><span>Kowalski, Mei · PT-014</span><code>TBD</code><b>→</b><em>Sent to review</em></div></div><fieldset class="date-choice"><legend>For 01.10.1940, which date did you mean?</legend><label><input type="radio" name="dateMeaning" value="dmy"> Day.Month.Year → 1 October 1940 <small>Matches the age shown</small></label><label><input type="radio" name="dateMeaning" value="mdy"> Month.Day.Year → 10 January 1940</label></fieldset><p class="illustrative-note">Choosing here records a reference-preview interaction only; it does not alter uploaded data.</p><div class="action-row"><button class="button primary" id="referenceApproveDate" type="button">Preview fix for 40 dates</button><button class="button secondary" id="referenceReviewOne" type="button">Review one by one</button><button class="text-button" data-go="export" type="button">Skip for now</button></div><p class="reference-action-message" id="referenceActionMessage" role="status" aria-live="polite"></p><button class="text-button" type="button" id="referenceSeeDates">See all 41 dates</button></article><div class="other-issues"><button type="button" data-reference-issue="Patient ID formats">Patient ID formats <span>19</span></button><button type="button" data-reference-issue="Age / DOB mismatch">Age / DOB mismatch <span>2</span></button><button type="button" data-reference-issue="Name typos">Name typos <span>2</span></button><button type="button" data-reference-issue="Marital status shorthand">Marital status shorthand <span>1</span></button><button type="button" data-reference-issue="Missing MRN">Missing MRN <span>1</span></button></div></section><aside class="patient-card progress-card"><p class="eyebrow">YOUR PROGRESS</p><h2>1 of 7</h2><div class="progress-track"><span></span></div><p>14% reviewed</p><hr><p><b>Values changed</b><span>37</span></p><p><b>Waiting for your review</b><span>1</span></p><p><b>Follow-up</b><span>0</span></p><p class="illustrative-note">Reference-only counts</p><button class="button primary full-width" data-go="export" type="button">Continue to export</button><small class="status-legend"><i class="fixed"></i>Fixed &nbsp; <i class="waiting"></i>Needs review &nbsp; <i class="followup"></i>Follow-up</small></aside></div></section>
-      <section class="patient-view" data-panel="review" hidden><div class="patient-review-layout"><section class="patient-card focused-review"><button class="text-button" data-go="fix" type="button">← Back to all issues</button><p class="eyebrow">REVIEWING · VALUES WE WON’T GUESS <span>1 OF 4</span></p><h2>What gender is Sarah Kim?</h2><p class="patient-lede">We found “2” in 2 records. We can’t tell what it means. Choose an option or leave the value unchanged.</p><div class="review-options"><button type="button" data-review-answer="Female">Female</button><button type="button" data-review-answer="Male">Male</button><button type="button" data-review-answer="Other / unknown">Other / unknown</button><button type="button" data-review-answer="Leave as 2">Leave as “2”</button></div><button class="button secondary" type="button" id="referenceFollowup">I don’t know — add to follow-up</button><button class="button primary" type="button" id="referenceApplyAnswer" disabled>Preview this answer for every “2” in Gender</button><h3>Sarah Kim · P0074</h3><dl class="patient-record"><dt>MRN</dt><dd>NULL</dd><dt>Date of birth</dt><dd>1977-12-05</dd><dt>Age</dt><dd>48</dd><dt>Gender</dt><dd>2</dd><dt>Marital status</dt><dd>Widowed</dd><dt>Preferred language</dt><dd>Yor</dd></dl><details><summary>Show all 32 fields</summary><p class="illustrative-note">The PDF provides only the fields shown above; additional field values are not invented.</p></details><p class="reference-action-message" id="reviewActionMessage" role="status" aria-live="polite"></p><div class="action-row"><span class="caption">Up next: Kowalski · DOB “TBD” · Anjali · marital “D” · Luis · ID “76”</span><button class="button primary" id="referenceNextReview" type="button">Next item</button></div></section><aside class="patient-card record-sidebar"><p class="eyebrow">THE FULL RECORD</p><h3>Sarah Kim · P0074</h3><dl class="patient-record"><dt>MRN</dt><dd>NULL</dd><dt>Date of birth</dt><dd>1977-12-05</dd><dt>Age</dt><dd>48</dd><dt>Gender</dt><dd>2</dd><dt>Marital status</dt><dd>Widowed</dd><dt>Preferred language</dt><dd>Yor</dd></dl><h3>Up next</h3><p>Kowalski · DOB “TBD”</p><p>Anjali · marital “D”</p><p>Luis · ID “76”</p></aside></div></section>
-      <section class="patient-view" data-panel="export" hidden><section class="patient-card export-ready"><p class="eyebrow">EXPORT</p><h2>Your clean file is ready</h2><p class="patient-lede">130 ready · 4 follow-up · 118 changed</p><p class="illustrative-note">These are illustrative PDF reference values. No output file is available until you upload and process your own file below.</p><div class="patient-export-grid"><article><span class="export-icon">↓</span><h3>Clean patient file</h3><p>Ready records · Excel or CSV</p><button class="button primary" id="referenceDownloadClean" type="button">Download clean file</button></article><article><span class="export-icon amber">↗</span><h3>Records to chase</h3><p>Follow-up list · CSV</p><button class="button secondary" id="referenceDownloadFollowup" type="button">Download follow-up list</button></article><article><span class="export-icon">≡</span><h3>Change log</h3><p>Who approved each change</p><button class="button secondary" id="referenceDownloadChanges" type="button">Download change log</button></article></div><div class="patient-card-inner"><h3>Recent changes · illustrative</h3><div class="patient-table-scroll"><table class="patient-table"><thead><tr><th>Patient</th><th>Field</th><th>Before</th><th>After</th><th>How</th></tr></thead><tbody><tr><td>Anjali</td><td>Date of birth</td><td>January 29 1987</td><td>1987-01-29</td><td>Bulk fix</td></tr><tr><td>Nadia B. Murphy</td><td>Gender</td><td>W</td><td>Female</td><td>Bulk fix</td></tr><tr><td>John R. Tanaka</td><td>Age</td><td>17</td><td>18</td><td>Recalculated</td></tr><tr><td>Anjali</td><td>Marital</td><td>D</td><td>Divorced</td><td>You reviewed</td></tr></tbody></table></div></div><section class="patient-lower-grid"><article><h3>Need only some records?</h3><label for="referenceCity">City</label><div class="reference-filter"><select id="referenceCity"><option value="">Choose a city</option><option>Newark</option><option>Baltimore</option></select><button class="button secondary" id="referenceAddCity" type="button">Add</button></div><p id="referenceCityResult" class="caption">Select a city to see the illustrative filter preview.</p></article><article><h3>For data teams</h3><p>Profile, quality, mapping and change reports</p><button class="text-button" data-go="real-file" type="button">Open real-file profile downloads</button></article></section><button class="button secondary" type="button" data-go="check">Back to Check</button></section></section>
-      <p class="reference-action-message" id="referenceExportMessage" role="status" aria-live="polite"></p>
-    </div>
-
-    <div id="realFileWorkspace" class="real-file-workspace" hidden>
-    <button class="text-button return-reference" id="returnToReference" type="button">← Return to synthetic design preview</button>
-    <p class="real-file-note" role="note">Real-file mode uses the existing local Customer Data Cleaner workflow. Synthetic reference counts and examples are not used for your file.</p>
-    <div class="stage-panel" id="checkStage">
+    <div id="realFileWorkspace" class="real-file-workspace">
+    <p class="real-file-note" role="note">Files are parsed locally. This prototype is not approved for patient or PHI data.</p>
+    <section class="stage-panel" id="uploadStage">
 
     <section class="card upload-card" aria-labelledby="uploadTitle">
-      <div class="section-heading"><div><span class="step">01</span><h2 id="uploadTitle">Upload a customer data file</h2></div><p>Data remains in this page session.</p></div>
+      <div class="section-heading"><div><span class="step">01</span><h2 id="uploadTitle">Choose a file to begin</h2></div><p>Data remains in this page session.</p></div>
       <label class="drop-zone" id="dropZone" for="fileInput">
         <span class="upload-icon" aria-hidden="true">↑</span>
         <strong>Choose a spreadsheet or delimited-text file</strong><span>or drag and drop it here</span>
@@ -72,7 +53,10 @@
       </div>
       <div class="import-warnings" id="importWarnings" role="status" aria-live="polite" hidden></div>
     </section>
+    </section>
 
+    <section class="stage-panel" id="checkStage" hidden aria-labelledby="checkStageTitle">
+    <h2 class="visually-hidden" id="checkStageTitle">Your data at a glance</h2>
     <section class="card" id="previewSection" hidden aria-labelledby="previewTitle">
       <div class="section-heading"><div><span class="step">02</span><h2 id="previewTitle">Preview source records</h2></div><button class="button secondary" id="replaceFile">Replace file</button></div>
       <div class="summary-strip" id="fileSummary"></div>
@@ -82,7 +66,7 @@
     </section>
 
     <section class="card" id="profileSection" hidden aria-labelledby="profileTitle">
-      <div class="section-heading"><div><span class="step">03</span><h2 id="profileTitle">Check your file</h2></div><button class="button secondary" id="profileButton" type="button">Refresh checks</button></div>
+      <div class="section-heading"><div><span class="step">03</span><h2 id="profileTitle">Your data at a glance</h2></div><button class="button secondary" id="profileButton" type="button">Refresh checks</button></div>
       <div id="profileResults" class="profile-dashboard"><p class="empty-state">A local profile will be generated after the file is parsed.</p></div>
       <section class="profile-actions" id="profileActions" aria-labelledby="profileDownloadsTitle" hidden>
         <h3 id="profileDownloadsTitle">Download profile</h3>
@@ -95,7 +79,7 @@
       </section>
       <section class="column-quality" aria-labelledby="columnQualityTitle">
         <details id="columnQualityDetails">
-          <summary id="columnQualityTitle">View all columns</summary>
+          <summary id="columnQualityTitle">More about your data</summary>
           <div class="column-quality-controls">
             <label for="columnSearch">Search columns</label><input id="columnSearch" type="search" placeholder="Search by name">
             <label for="columnSort">Sort</label><select id="columnSort"><option value="priority">Highest missing first</option><option value="name">Column name</option><option value="missing">Missing count</option><option value="status">Quality status</option></select>
@@ -110,7 +94,7 @@
     </section>
 
     <section class="card" id="mappingSection" hidden aria-labelledby="mappingTitle">
-      <div class="section-heading"><div><span class="step">04</span><h2 id="mappingTitle">Map the required record ID</h2></div><span class="badge review">Human confirmation required</span></div>
+      <div class="section-heading"><div><span class="step">04</span><h2 id="mappingTitle">Mapping Customer Data</h2></div><span class="badge review">Human confirmation required</span></div>
       <p class="section-copy">This demo maps the BRD-required Customer ID field. It does not implement patient-specific identifiers or policies and is not approved for sensitive patient data. Suggestions use source headers and values as evidence; they are heuristic and never count as approval. Original source columns and values remain preserved.</p>
       <div class="mapping-usecase">
         <label for="mappingUseCase">Recommended mappings for your use case</label>
@@ -131,6 +115,7 @@
       <div class="action-row"><button class="button primary" id="continueToFix" type="button" disabled>Continue to Fix</button><span class="caption" id="mappingStatus" role="status" aria-live="polite">Profile the file to begin mapping.</span></div>
     </section>
 
+    </section>
     </div>
 
     <section class="stage-panel" id="fixStage" hidden aria-labelledby="fixStageTitle">
@@ -164,7 +149,7 @@
     </section>
 
     <section class="card" id="resultsSection" hidden aria-labelledby="resultsTitle">
-      <div class="section-heading"><div><span class="step">06</span><h2 id="resultsTitle">Cleaning and validation results</h2></div><span class="badge provisional">Illustrative rules</span></div>
+      <div class="section-heading"><div><span class="step">06</span><h2 id="resultsTitle">Processing and validation results</h2></div><span class="badge provisional">Illustrative rules</span></div>
       <p class="section-copy">Original source cells are retained beside canonical values. Customer ID absence and same-batch duplicates are blocking checks. A basic email check and non-ISO date screening are review-only; no date conversion occurs. Whitespace trimming and email lowercasing are applied only when explicitly approved in this page session. Tokens such as N/A and NULL remain literal text. This demo does not import records.</p>
       <div class="metric-grid" id="metrics"></div>
       <p class="status" id="resultStatus" role="status" aria-live="polite"></p>
@@ -182,10 +167,10 @@
     </section>
 
       <section class="card" aria-labelledby="exportTitle">
-        <div class="section-heading"><div><span class="step">03</span><h2 id="exportTitle">Export reviewed results</h2></div></div>
+        <div class="section-heading"><div><span class="step">03</span><h2 id="exportTitle">Your data is ready to download</h2></div></div>
         <p id="exportSummary" class="section-copy">Run checks in the Fix step to prepare data-derived export summaries.</p>
         <div class="export-cards">
-          <article class="export-card"><h3>Cleaned records</h3><p>Only rows with no configured blocking or review findings.</p><button class="button secondary" id="downloadClean" type="button">Download eligible CSV</button></article>
+          <article class="export-card"><h3>Cleaned records</h3><p>Only rows with no configured blocking or review findings.</p><button class="button secondary" id="downloadClean" type="button">Download clean file (.csv)</button></article>
           <article class="export-card"><h3>Follow-up list</h3><p>Records that need a person to review the reported findings.</p><button class="button secondary" id="downloadExceptions" type="button">Download follow-up CSV</button></article>
           <article class="export-card"><h3>Change log</h3><p>Original and resulting values for approved formatting changes.</p><button class="button secondary" id="downloadChangeLog" type="button">Download change log CSV</button></article>
         </div>

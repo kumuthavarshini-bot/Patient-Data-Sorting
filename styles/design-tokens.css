@@ -1,0 +1,55 @@
+/* Shared design tokens and site chrome for both application pages. */
+:root {
+  color-scheme: light;
+  --primary-blue: #2563EB;
+  --dark-navy: #163B65;
+  --light-blue: #60A5FA;
+  --pale-blue: #EFF6FF;
+  --app-bg: #F8FAFC;
+  --card-bg: #FFFFFF;
+  --primary-text: #172B4D;
+  --secondary-text: #64748B;
+  --border: #D7E3F0;
+  --hover-bg: #DBEAFE;
+  --success: #15803D;
+  --warning: #B45309;
+  --error: #DC2626;
+  --focus-ring: #2563EB;
+  --font-sans: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px;
+  --space-6: 24px; --space-8: 32px;
+  --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px;
+  --shadow-card: 0 8px 24px rgba(22, 59, 101, .08);
+  --content-width: 1180px;
+  /* Legacy aliases retained so the existing page styles consume the same tokens. */
+  --forest: var(--dark-navy); --forest-2: #1E4B78; --ink: var(--primary-text);
+  --text: #334155; --muted: var(--secondary-text); --teal: var(--primary-blue);
+  --mint: var(--hover-bg); --paper: var(--app-bg); --line: var(--border);
+  --white: var(--card-bg); --shadow: var(--shadow-card);
+  --green: var(--primary-blue); --green2: var(--dark-navy);
+  --surface: var(--card-bg); --page: var(--app-bg); --amber: #FFF3D4; --red: #9D3240;
+  font-family: var(--font-sans);
+  color: var(--primary-text);
+  background: var(--app-bg);
+  font-synthesis: none;
+  line-height: 1.5;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; font-family: var(--font-sans); color: var(--primary-text); background: var(--app-bg); line-height: 1.5; }
+.topnav { position: sticky; top: 0; z-index: 10; background: rgba(255,255,255,.96); color: var(--primary-text); border-bottom: 1px solid var(--border); backdrop-filter: blur(12px); }
+.nav-inner { max-width: var(--content-width); margin: auto; padding: 0 24px; min-height: 70px; display: flex; align-items: center; gap: 24px; }
+.wordmark { color: var(--primary-text); font-size: 14px; letter-spacing: .01em; font-weight: 750; margin-right: auto; text-decoration: none; }
+.navlinks { display: flex; align-items: center; gap: 8px; }
+.navlinks a { font-size: 13px; text-decoration: none; color: var(--secondary-text); padding: 9px 13px; border-radius: var(--radius-sm); font-weight: 650; }
+.navlinks a[aria-current="page"], .navlinks a:hover { background: var(--hover-bg); color: var(--dark-navy); }
+.navlinks .demo-link { border: 1px solid var(--border); color: var(--dark-navy); }
+:where(a, button, input, select, summary, [tabindex]):focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+@media (max-width: 700px) {
+  .nav-inner { min-height: 62px; padding: 8px 16px; gap: 8px; }
+  .wordmark { font-size: 12px; }
+  .navlinks { gap: 3px; }
+  .navlinks a { padding: 8px; font-size: 11px; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }

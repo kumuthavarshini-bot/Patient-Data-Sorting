@@ -21,111 +21,37 @@
   const dropZone = $("dropZone");
 
   function setStage(stage) {
-    const allowed = stage === "check" || stage === "fix" && Boolean(state.file && state.profile) || stage === "export" && Boolean(state.results);
+    const allowed = stage === "upload"
+      || stage === "check" && Boolean(state.file)
+      || stage === "fix" && Boolean(state.file && state.profile)
+      || stage === "export" && Boolean(state.results);
     if (!allowed) return;
     state.currentStage = stage;
+    $("uploadStage").hidden = stage !== "upload";
     $("checkStage").hidden = stage !== "check";
     $("fixStage").hidden = stage !== "fix";
     $("exportStage").hidden = stage !== "export";
-    [["stepCheck", "check"], ["stepFix", "fix"], ["stepExport", "export"]].forEach(([id, key]) => {
+    [["stepUpload", "upload"], ["stepCheck", "check"], ["stepFix", "fix"], ["stepExport", "export"]].forEach(([id, key]) => {
       const button = $(id);
       button.classList.toggle("active", key === stage);
-      button.disabled = key === "fix" ? !state.file || !state.profile : key === "export" ? !state.results : false;
+      button.disabled = key === "upload" ? false
+        : key === "check" ? !state.file
+        : key === "fix" ? !state.file || !state.profile || state.mappingSources.customer_id !== "manual"
+        : !state.results;
       if (key === stage) button.setAttribute("aria-current", "step"); else button.removeAttribute("aria-current");
     });
     window.dispatchEvent(new Event("cdc:stage-changed"));
   }
 
+  $("stepUpload").addEventListener("click", () => setStage("upload"));
   $("stepCheck").addEventListener("click", () => setStage("check"));
   $("stepFix").addEventListener("click", () => setStage("fix"));
   $("stepExport").addEventListener("click", () => setStage("export"));
   $("continueToFix").addEventListener("click", () => setStage("fix"));
   $("continueToExport").addEventListener("click", () => setStage("export"));
-  setStage("check");
+  setStage("upload");
   // Keep validation findings with Fix while source filters and exports live in Export.
   $("fixStage").appendChild($("resultsSection"));
-
-  const referenceShell = $("patientReferenceShell");
-  const realFileWorkspace = $("realFileWorkspace");
-  const referenceElements = (selector) => referenceShell.querySelectorAll ? [...referenceShell.querySelectorAll(selector)] : [];
-  function showReferencePanel(name) {
-    referenceElements("[data-panel]").forEach((panel) => { panel.hidden = panel.dataset.panel !== name; });
-    referenceElements("[data-view]").forEach((button) => {
-      const active = button.dataset.view === name;
-      button.classList.toggle("current", active);
-      if (active) button.setAttribute("aria-current", "step"); else button.removeAttribute("aria-current");
-    });
-    if (referenceShell.scrollIntoView) referenceShell.scrollIntoView({ block: "start", behavior: "smooth" });
-  }
-  function openRealFileWorkspace() {
-    referenceShell.hidden = true;
-    realFileWorkspace.hidden = false;
-    document.body.classList.remove("reference-preview");
-    setStage("check");
-    const upload = $("uploadTitle");
-    if (upload && upload.scrollIntoView) upload.scrollIntoView({ block: "center", behavior: "smooth" });
-  }
-  $("referenceAskAssistant").addEventListener("click", () => $("assistantLauncher").click());
-  $("referenceChangeFile").addEventListener("click", () => { openRealFileWorkspace(); fileInput.click(); });
-  $("referenceChangeFileLink").addEventListener("click", () => { openRealFileWorkspace(); fileInput.click(); });
-  $("returnToReference").addEventListener("click", () => {
-    realFileWorkspace.hidden = true;
-    referenceShell.hidden = false;
-    document.body.classList.add("reference-preview");
-    referenceShell.scrollIntoView && referenceShell.scrollIntoView({ block: "start" });
-  });
-  referenceShell.addEventListener("click", (event) => {
-    const viewButton = event.target.closest("[data-view]");
-    if (viewButton) { showReferencePanel(viewButton.dataset.view); return; }
-    const action = event.target.closest("[data-go]");
-    if (action) {
-      if (action.dataset.go === "real-file") openRealFileWorkspace();
-      else showReferencePanel(action.dataset.go);
-      return;
-    }
-    const mapButton = event.target.closest("[data-reference-map]");
-    if (mapButton) {
-      $("referenceActionMessage").textContent = `“${mapButton.dataset.referenceMap}” is shown as a synthetic reference mapping. Upload a file to configure a real mapping.`;
-      return;
-    }
-    const issue = event.target.closest("[data-reference-issue]");
-    if (issue) $("referenceActionMessage").textContent = `${issue.dataset.referenceIssue} is illustrative in this reference screen. Upload a file to see findings derived from its values.`;
-  });
-  $("referenceApproveDate").addEventListener("click", () => {
-    $("referenceActionMessage").textContent = "Preview only: a date-format decision would need human approval. This synthetic screen changes no records; real-file date conversion is not implemented.";
-  });
-  $("referenceReviewOne").addEventListener("click", () => showReferencePanel("review"));
-  $("referenceFollowup").addEventListener("click", () => {
-    $("reviewActionMessage").textContent = "Reference preview only: the follow-up action is illustrated and does not create or export a record.";
-  });
-  $("referenceNextReview").addEventListener("click", () => showReferencePanel("fix"));
-  referenceElements("[data-review-answer]").forEach((button) => button.setAttribute("aria-pressed", "false"));
-  referenceElements("[data-review-answer]").forEach((button) => button.addEventListener("click", () => {
-    referenceElements("[data-review-answer]").forEach((candidate) => {
-      const selected = candidate === button;
-      candidate.classList.toggle("selected", selected);
-      candidate.setAttribute("aria-pressed", String(selected));
-    });
-    $("referenceApplyAnswer").disabled = false;
-    $("reviewActionMessage").textContent = `“${button.dataset.reviewAnswer}” selected for this synthetic reference only. No real record or global rule is changed.`;
-  }));
-  $("referenceApplyAnswer").addEventListener("click", () => {
-    $("reviewActionMessage").textContent = "Reference preview only: the selected answer illustrates a scoped review rule. It does not change records or create a global policy.";
-  });
-  $("referenceUndoGender").addEventListener("click", () => {
-    $("referenceActionMessage").textContent = "Reference preview only: Undo is shown to illustrate review history. No source or processed values were changed.";
-  });
-  $("referenceSeeDates").addEventListener("click", () => {
-    $("referenceActionMessage").textContent = "The design PDF provides five examples, not all 41 values. Upload a file to inspect its actual date values.";
-  });
-  ["referenceDownloadClean", "referenceDownloadFollowup", "referenceDownloadChanges"].forEach((id) => $(id).addEventListener("click", () => {
-    $("referenceExportMessage").textContent = "No reference download was created. Upload and process a file to download outputs based on your own data.";
-  }));
-  $("referenceAddCity").addEventListener("click", () => {
-    const city = $("referenceCity").value;
-    $("referenceCityResult").textContent = city ? `${city} is a sample filter choice; this reference contains no complete rows to count. Upload a file for data-derived filtering.` : "Choose a city first.";
-  });
-  showReferencePanel("check");
 
   function ensureSpreadsheetLibrary() {
     if (window.XLSX) return Promise.resolve(window.XLSX);
@@ -146,7 +72,7 @@
     $("profileActions").hidden = true;
     $("previewSection").hidden = true; $("profileSection").hidden = true; $("mappingSection").hidden = true; $("filterSection").hidden = true; $("resultsSection").hidden = true;
     $("reviewOneByOne").hidden = true; $("continueToExport").disabled = true;
-    setStage("check");
+    setStage("upload");
     $("importOptions").hidden = true; $("worksheetControl").hidden = true; $("delimiterControl").hidden = true; $("importWarnings").hidden = true;
     window.dispatchEvent(new Event("cdc:dataset-changed"));
   }
@@ -223,9 +149,6 @@
     $("headerRowInput").value = String(opened.table.headerRow);
   }
   function applyImportedTable(table) {
-    $("patientReferenceShell").hidden = true;
-    $("realFileWorkspace").hidden = false;
-    document.body.classList.remove("reference-preview");
     state.importTable = table;
     state.headers = [...table.headers];
     state.rows = table.rows.map((values, index) => ({ rowNumber: table.sourceRows[index], values }));
@@ -243,6 +166,7 @@
     } else $("importWarnings").hidden = true;
     renderPreview();
     profileData();
+    setStage("check");
   }
   function reparseSelection() {
     if (!state.importContext) return;
@@ -335,51 +259,45 @@
     const ready = state.results ? state.results.filter((record) => record.status === "valid").length : null;
     const fixed = state.results ? state.results.filter((record) => record.changes.length).length : candidates.rows.size;
     const review = state.results ? state.results.filter((record) => record.status === "needs_review").length : null;
-    const blocked = state.results ? state.results.filter((record) => record.status === "invalid").length : null;
-    const values = [["Ready", ready == null ? "—" : ready.toLocaleString(), ready == null ? "Run review to calculate" : "Pass current demo checks"], ["We can fix", fixed.toLocaleString(), state.results ? "Records with approved formatting changes" : "Formatting candidates; approval required"], ["Needs your eye", review == null ? "—" : review.toLocaleString(), review == null ? "Run review to calculate" : "Records with review findings"], ["Can't fix here", blocked == null ? "—" : blocked.toLocaleString(), blocked == null ? "Run review to calculate" : "Blocking records remain in follow-up"]];
+    const values = [
+      ["Total records", profile.metadata.row_count.toLocaleString(), `${profile.metadata.column_count.toLocaleString()} source columns`],
+      ["Ready records", ready == null ? "Not evaluated" : ready.toLocaleString(), ready == null ? "Confirm the required mapping and run checks" : "Pass current demo checks"],
+      ["Fixable issues", fixed.toLocaleString(), state.results ? "Records with approved formatting changes" : "Records with supported formatting candidates; approval required"],
+      ["Needs review", review == null ? "Not evaluated" : review.toLocaleString(), review == null ? "Run checks to calculate" : "Records with review findings"]
+    ];
     const container = $("profileResults"); container.replaceChildren();
-    container.appendChild(textNode("p", `${profile.metadata.row_count.toLocaleString()} records · ${profile.metadata.column_count.toLocaleString()} columns`, "dataset-totals"));
     const grid = document.createElement("div"); grid.className = "health-cards";
-    values.forEach(([label, value, note], index) => { const card = document.createElement("article"); card.className = `health-card health-${["ready", "fix", "review", "blocked"][index]}`; card.append(textNode("span", label), textNode("b", value), textNode("small", note)); grid.appendChild(card); });
+    values.forEach(([label, value, note], index) => { const card = document.createElement("article"); card.className = `health-card health-${["ready", "ready", "fix", "review"][index]}`; card.append(textNode("span", label), textNode("b", value), textNode("small", note)); grid.appendChild(card); });
     container.appendChild(grid);
-    const total = state.results ? state.results.length : 0;
-    const segments = document.createElement("div"); segments.className = "health-bar"; segments.setAttribute("role", "img");
-    if (total) {
-      const counts = [ready, review, blocked];
-      const colors = ["#16845b", "#b7791f", "#b42332"];
-      segments.setAttribute("aria-label", `Results: ${ready} ready, ${review} need review, ${blocked} blocked; ${fixed} records have approved changes.`);
-      counts.forEach((count, index) => { const segment = document.createElement("span"); segment.className = "health-segment"; segment.setAttribute("style", `width:${Math.max(0, count || 0) / total * 100}%;background:${colors[index]}`); segments.appendChild(segment); });
-    } else {
-      segments.setAttribute("aria-label", "Run checks to see the data health summary.");
-      const segment = document.createElement("span"); segment.className = "health-segment health-pending"; segments.appendChild(segment);
-    }
-    container.append(segments, textNode("h3", "What we found"));
-    const findings = document.createElement("div"); findings.className = "finding-list";
-    const sourceFindings = [...profile.columns].filter((column) => column.missing_count > 0).sort((a, b) => b.missing_count - a.missing_count || a.name.localeCompare(b.name)).slice(0, 5);
+    container.appendChild(textNode("h3", "What needs attention"));
+
+    const observations = [];
     if (state.results) {
       const groups = new Map();
       state.results.flatMap((record) => [...record.errors, ...record.warnings].map((issue) => ({ record, issue }))).forEach(({ record, issue }) => {
         const key = `${issue.code}:${issue.field}`; const item = groups.get(key) || { issue, records: [] }; item.records.push(record.rowNumber); groups.set(key, item);
       });
-      if (groups.size) groups.forEach(({ issue, records }) => {
-        const item = document.createElement("article"); item.className = `finding-item ${issue.severity === "blocking" ? "finding-blocking" : "finding-review"}`;
-        item.append(textNode("strong", issue.message), textNode("span", `${records.length.toLocaleString()} record${records.length === 1 ? "" : "s"} · ${issue.field || issue.code}`)); findings.appendChild(item);
+      [...groups.values()].sort((a, b) => (a.issue.severity === "blocking" ? 0 : 1) - (b.issue.severity === "blocking" ? 0 : 1) || b.records.length - a.records.length || String(a.issue.message).localeCompare(String(b.issue.message))).forEach(({ issue, records }) => {
+        observations.push({ title: issue.message, detail: `${records.length.toLocaleString()} record${records.length === 1 ? "" : "s"} · ${issue.field || issue.code}`, className: issue.severity === "blocking" ? "finding-blocking" : "finding-review" });
       });
-      if (!groups.size) findings.appendChild(textNode("p", "No findings were raised by the current demo checks.", "empty-state"));
     } else {
-      if (profile.counts.missing_customer_id_records > 0) findings.appendChild(findingCard(`${profile.counts.missing_customer_id_records} potential missing Customer ID row(s)`, "Based on the suggested ID column; confirm the mapping before treating this as a validation result.", "finding-review"));
-      if (profile.counts.potential_duplicate_identifier_records > 0) findings.appendChild(findingCard(`${profile.counts.potential_duplicate_identifier_records} potential duplicate ID row(s)`, "Candidate only until you confirm the Customer ID mapping.", "finding-review"));
-      sourceFindings.forEach((column) => findings.appendChild(findingCard(`${column.missing_count.toLocaleString()} blank value(s) in ${column.name}`, "Observed missingness; this source field is not assumed mandatory.", "finding-neutral")));
-      if (!findings.children.length) findings.appendChild(textNode("p", "No profile observations were found. Confirm the required record ID mapping to run validation.", "empty-state"));
+      if (profile.counts.missing_customer_id_records > 0) observations.push({ title: `${profile.counts.missing_customer_id_records.toLocaleString()} potential missing Customer ID row(s)`, detail: "Based on the suggested ID column; confirm the mapping before treating this as a validation result.", className: "finding-review" });
+      if (profile.counts.potential_duplicate_identifier_records > 0) observations.push({ title: `${profile.counts.potential_duplicate_identifier_records.toLocaleString()} potential duplicate ID row(s)`, detail: "Candidate only until you confirm the Customer ID mapping.", className: "finding-review" });
+      [...profile.columns].filter((column) => column.missing_count > 0).sort((a, b) => b.missing_count - a.missing_count || a.name.localeCompare(b.name)).forEach((column) => observations.push({ title: `${column.missing_count.toLocaleString()} blank value(s) in ${column.name}`, detail: "Observed missingness; this source field is not assumed mandatory.", className: "finding-neutral" }));
     }
-    container.appendChild(findings);
-    const priorities = [...profile.columns].sort((a, b) => b.missing_count - a.missing_count || a.name.localeCompare(b.name)).filter((column) => column.missing_count > 0).slice(0, 5);
-    const shown = priorities.length ? priorities : profile.columns.slice(0, 5);
-    const table = document.createElement("div"); table.className = "profile-priority-table";
-    buildTable(table, ["Column", "Inferred type", "Present", "Missing", "Distinct", "Quality", "Recommended action"], shown.map((column) => [column.name, column.inferred_type, column.present_count, column.missing_count, column.distinct_count, column.quality_status, column.recommended_action]));
-    container.appendChild(textNode("h3", priorities.length ? "Columns with the most missing values" : "Column overview"));
-    container.appendChild(table);
-    $("columnQualityTitle").textContent = `View all columns (${profile.columns.length})`;
+    if (!observations.length) observations.push({ title: state.results ? "No findings were raised by the current demo checks." : "No profile observations were found.", detail: state.results ? "Review the current check summary before exporting." : "Confirm the required record ID mapping to run validation.", className: "finding-neutral" });
+
+    const findingList = document.createElement("div"); findingList.className = "finding-list";
+    observations.slice(0, 3).forEach((item) => findingList.appendChild(findingCard(item.title, item.detail, item.className)));
+    container.appendChild(findingList);
+    if (observations.length > 3) {
+      const more = document.createElement("details");
+      more.appendChild(textNode("summary", "View all issues"));
+      const remainder = document.createElement("div"); remainder.className = "finding-list";
+      observations.slice(3).forEach((item) => remainder.appendChild(findingCard(item.title, item.detail, item.className)));
+      more.appendChild(remainder); container.appendChild(more);
+    }
+    $("columnQualityTitle").textContent = `More about your data · ${profile.columns.length} columns`;
     renderColumnQuality();
   }
   function findingCard(title, note, className) {
@@ -595,6 +513,7 @@
     const enabled = readiness.enabled && explicitlyConfirmed;
     $("cleanButton").disabled = !enabled;
     $("continueToFix").disabled = !enabled;
+    $("stepFix").disabled = !enabled;
     $("mappingStatus").textContent = enabled
       ? "Customer ID mapping is confirmed. Optional fields may remain unmapped."
       : readiness.enabled && !explicitlyConfirmed ? "Review and explicitly confirm the Customer ID mapping before processing." : readiness.reason;

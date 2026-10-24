@@ -13,6 +13,7 @@ const publicFiles = [
   "index.html",
   "demo.html",
   "demo.css",
+  "styles/design-tokens.css",
   "demo-core.js",
   "spreadsheet-importer.js",
   "demo.js",

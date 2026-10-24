@@ -82,7 +82,7 @@ test("static deployment contains the app pages, local spreadsheet parser and eli
     const deployed = JSON.parse(fs.readFileSync(path.join(output, "input/customer_data_cleaner_chatbot_approved_qa.json"), "utf8"));
     const sourceEligible = chat.availableEntries(source.entries);
     const shipped = fs.readdirSync(output).sort();
-    assert.deepEqual(shipped, ["chat-core.js", "customer_data_cleaner_orchestrator_interactive_patient_hero (1).html", "demo-chat.js", "demo-core.js", "demo.css", "demo.html", "demo.js", "index.html", "input", "outcomes.html", "spreadsheet-importer.js", "vendor"].sort());
+    assert.deepEqual(shipped, ["chat-core.js", "customer_data_cleaner_orchestrator_interactive_patient_hero (1).html", "demo-chat.js", "demo-core.js", "demo.css", "demo.html", "demo.js", "index.html", "input", "outcomes.html", "spreadsheet-importer.js", "styles", "vendor"].sort());
     assert.ok(fs.existsSync(path.join(output, "index.html")));
     assert.ok(fs.existsSync(path.join(output, "demo.html")));
     assert.ok(fs.existsSync(path.join(output, "spreadsheet-importer.js")));

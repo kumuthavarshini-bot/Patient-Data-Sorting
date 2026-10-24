@@ -249,35 +249,18 @@ test("profile downloads contain aggregate data and recommended filters download 
   assert.doesNotMatch(app.downloadLinks.at(-1).blob.parts.join(""), /C1/);
 });
 
-test("synthetic reference preview stays separate from real uploads and never exports reference rows", async () => {
+test("Live Demo opens on an empty upload step and gates later workflow stages", async () => {
   const app = await startDemo();
-  await app.elements.referenceAskAssistant.dispatch("click");
-  assert.equal(app.elements.assistantLauncher.clicked, true, "Ask DataCare remains reachable from the reference banner");
-  await app.elements.referenceDownloadClean.dispatch("click");
-  assert.equal(app.downloadLinks.length, 0);
-  assert.match(app.elements.referenceExportMessage.textContent, /No reference download was created/);
-
-  await app.elements.referenceChangeFile.dispatch("click");
-  assert.equal(app.elements.patientReferenceShell.hidden, true);
+  const html = fs.readFileSync(path.join(__dirname, "../demo.html"), "utf8");
+  assert.equal(app.window.CdcDemoData.getCurrentDataset(), null);
   assert.equal(app.elements.realFileWorkspace.hidden, false);
-  assert.equal(app.elements.fileInput.clicked, true);
-
-  const csv = "Customer ID,Name\nC1,Sample";
-  const file = { name: "synthetic-handoff.csv", type: "text/csv", size: Buffer.byteLength(csv), async arrayBuffer() { const buffer = Buffer.from(csv); return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength); } };
-  await app.elements.fileInput.dispatch("change", { target: { files: [file], value: "selected" } });
-  await new Promise((resolve) => setImmediate(resolve));
-  assert.equal(app.elements.patientReferenceShell.hidden, true);
-  assert.equal(app.elements.realFileWorkspace.hidden, false);
-  assert.equal(app.window.CdcDemoData.getCurrentDataset().sourceFileName, "synthetic-handoff.csv");
-});
-
-test("reference screen actions explain unsupported operations instead of changing sample data", async () => {
-  const app = await startDemo();
-  await app.elements.referenceApproveDate.dispatch("click");
-  assert.match(app.elements.referenceActionMessage.textContent, /does not transform sample records|date-format decision/);
-  await app.elements.referenceFollowup.dispatch("click");
-  assert.match(app.elements.reviewActionMessage.textContent, /does not create or export a record/);
-  app.elements.referenceCity.value = "Newark";
-  await app.elements.referenceAddCity.dispatch("click");
-  assert.match(app.elements.referenceCityResult.textContent, /no complete rows to count/);
+  assert.equal(app.elements.uploadStage.hidden, false);
+  assert.equal(app.elements.checkStage.hidden, true);
+  assert.equal(app.elements.stepUpload.attributes["aria-current"], "step");
+  assert.equal(app.elements.stepCheck.disabled, true);
+  assert.equal(app.elements.stepFix.disabled, true);
+  assert.equal(app.elements.stepExport.disabled, true);
+  assert.match(html, /<h1>Upload your data<\/h1>/);
+  assert.match(html, /id="workflowStepper"[\s\S]*?Upload[\s\S]*?Check[\s\S]*?Fix[\s\S]*?Export/);
+  assert.doesNotMatch(html, /patient_data_100\.xlsx|134 illustrative records|Synthetic reference preview/);
 });
