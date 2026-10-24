@@ -66,6 +66,17 @@ test("approved entries are available and status-held or rejected entries stay ex
   assert.equal(chat.matchQuestion("What are my account billing credentials?", entries), null);
 });
 
+test("stage recommendations use only exact approved entries and never surface held entries", () => {
+  const staged = [...entries, { ...entries[0], id: "held_synthetic", status: "held" }];
+  for (const stage of ["check", "fix", "mapping", "review", "export"]) {
+    const recommendations = chat.recommendedEntries(staged, stage);
+    assert.ok(recommendations.length > 0, `${stage} has recommendations`);
+    assert.ok(recommendations.every((entry) => entries.some((approved) => approved.id === entry.id && approved.question === entry.question && approved.answer === entry.answer)));
+    assert.ok(recommendations.every((entry) => entry.id !== "held_synthetic"));
+  }
+  assert.deepEqual(chat.recommendedEntries(staged, "mapping").map((entry) => entry.id).slice(0, 3), ["faq_005", "faq_011", "faq_016"]);
+});
+
 test("recognizes location-count questions without fuzzy location parsing", () => {
   assert.equal(chat.locationQuestion("How many customers are from Newark?"), "Newark");
   assert.equal(chat.locationQuestion("How many records are in Secaucus?"), "Secaucus");

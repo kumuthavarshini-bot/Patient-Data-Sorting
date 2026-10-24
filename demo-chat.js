@@ -25,7 +25,8 @@
   }
   function showSuggestions() {
     suggestions.replaceChildren();
-    CdcChatCore.recommendedEntries(entries).forEach((entry) => {
+    const currentStage = window.CdcDemoData && typeof window.CdcDemoData.getCurrentStage === "function" ? window.CdcDemoData.getCurrentStage() : "";
+    CdcChatCore.recommendedEntries(entries, currentStage).forEach((entry) => {
       const button = document.createElement("button"); button.className = "assistant-suggestion"; button.type = "button"; button.textContent = entry.question;
       button.addEventListener("click", () => submitRecommendation(entry)); suggestions.appendChild(button);
     });
@@ -170,6 +171,7 @@
   window.addEventListener("cdc:dataset-changed", () => {
     pendingLocation = ""; locationColumn.replaceChildren(); locationTools.hidden = true;
   });
+  window.addEventListener("cdc:stage-changed", () => { if (entries.length && !chatBusy && !recommendationBusy) showSuggestions(); });
 
   function avoidControlOverlap() {
     if (panel.hidden === false || document.activeElement === launcher) { launcher.classList.remove("overlap-hidden"); return; }

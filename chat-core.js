@@ -4,6 +4,13 @@
   const MIN_MATCH_SCORE = 0.72;
   const MIN_SCORE_GAP = 0.16;
   const RECOMMENDATION_IDS = ["faq_002", "faq_004", "faq_005", "faq_013"];
+  const STAGE_RECOMMENDATION_IDS = {
+    check: ["faq_002", "faq_004", "faq_018", "faq_001"],
+    fix: ["faq_006", "faq_010", "faq_012", "faq_009"],
+    mapping: ["faq_005", "faq_011", "faq_016", "faq_002"],
+    review: ["faq_007", "faq_013", "faq_014", "faq_016"],
+    export: ["faq_015", "faq_001", "faq_020", "faq_014"]
+  };
   const STOP_WORDS = new Set(["a", "an", "and", "are", "as", "at", "be", "behind", "by", "can", "could", "do", "does", "for", "from", "happens", "how", "i", "in", "is", "it", "me", "my", "of", "on", "or", "please", "tell", "the", "to", "what", "when", "where", "which", "who", "why", "with", "would", "you", "your"]);
 
   function normalize(value) {
@@ -30,9 +37,10 @@
   function availableEntries(entries) { return entries.filter(isApproved); }
   function reviewEntries(entries) { return entries.filter((entry) => !isApproved(entry)); }
   function recommendationById(id, entries) { return entries.find((entry) => entry.id === id) || null; }
-  function recommendedEntries(entries) {
+  function recommendedEntries(entries, stage = "") {
     const approved = availableEntries(entries);
-    const selected = RECOMMENDATION_IDS.map((id) => recommendationById(id, approved)).filter(Boolean);
+    const ids = STAGE_RECOMMENDATION_IDS[stage] || RECOMMENDATION_IDS;
+    const selected = ids.map((id) => recommendationById(id, approved)).filter(Boolean);
     for (const entry of approved) if (selected.length < 4 && !selected.includes(entry)) selected.push(entry);
     return selected.slice(0, 4);
   }
@@ -114,7 +122,7 @@
     if (!best || best.score < MIN_MATCH_SCORE || (next && best.score - next.score < MIN_SCORE_GAP)) return null;
     return best.entry;
   }
-  const api = { RECOMMENDATION_IDS, normalize, validateKnowledgeBase, availableEntries, reviewEntries, recommendationById, recommendedEntries, locationQuestion, formatKnowledgeBaseLoadError, loadKnowledgeBase, matchQuestion };
+  const api = { RECOMMENDATION_IDS, STAGE_RECOMMENDATION_IDS, normalize, validateKnowledgeBase, availableEntries, reviewEntries, recommendationById, recommendedEntries, locationQuestion, formatKnowledgeBaseLoadError, loadKnowledgeBase, matchQuestion };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   root.CdcChatCore = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

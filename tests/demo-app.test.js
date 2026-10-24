@@ -136,6 +136,40 @@ test("uploaded CSV requires explicit Customer ID mapping, filters real rows, and
   assert.equal(summary.applied_filters[0].value, "newark");
 });
 
+test("Check → Fix → Export stages require approved changes and produce an honest change log", async () => {
+  const app = await startDemo();
+  const csv = "Customer ID,Email\n C1 , PERSON@EXAMPLE.TEST";
+  const file = { name: "synthetic-approval.csv", type: "text/csv", size: Buffer.byteLength(csv), async arrayBuffer() { const buffer = Buffer.from(csv); return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength); } };
+  await app.elements.fileInput.dispatch("change", { target: { files: [file], value: "selected" } });
+  await new Promise((resolve) => setImmediate(resolve));
+  mappingSelect(app, "map-customer_id").value = "Customer ID";
+  await mappingSelect(app, "map-customer_id").dispatch("change");
+  await app.elements.addMapping.dispatch("click");
+  const optionalRow = app.elements.mappingList.children.find((row) => row.children.some((child) => child.id === "target-full_name"));
+  const targetSelector = optionalRow.children.find((child) => child.id === "target-full_name");
+  targetSelector.value = "email";
+  await targetSelector.dispatch("change");
+  mappingSelect(app, "map-email").value = "Email";
+  await mappingSelect(app, "map-email").dispatch("change");
+  await app.elements.continueToFix.dispatch("click");
+  assert.equal(app.elements.checkStage.hidden, true);
+  assert.equal(app.elements.fixStage.hidden, false);
+  const inputs = app.elements.fixApprovalList.children.filter((child) => child.tagName === "label").map((label) => label.children[0]);
+  assert.equal(inputs.length, 2, "only transformations found in the mapped source cells are offered");
+  inputs.forEach((input) => { input.checked = true; input.dispatch("change"); });
+  await app.elements.cleanButton.dispatch("click");
+  assert.match(app.elements.changesPane.textContent, /PERSON@EXAMPLE\.TEST/);
+  assert.equal(app.elements.continueToExport.disabled, false);
+  await app.elements.continueToExport.dispatch("click");
+  assert.equal(app.elements.fixStage.hidden, true);
+  assert.equal(app.elements.exportStage.hidden, false);
+  await app.elements.downloadChangeLog.dispatch("click");
+  assert.match(app.downloadLinks.at(-1).filename, /approved_change_log\.csv/);
+  const changeLog = app.downloadLinks.at(-1).blob.parts.join("");
+  assert.match(changeLog, /Approved in this page session/);
+  assert.match(changeLog, /PERSON@EXAMPLE\.TEST/);
+});
+
 test("mapping readiness blocks reused source columns and permits reset of active filters", async () => {
   const app = await startDemo();
   const csv = "Customer ID,Name\nC1,A";
@@ -213,4 +247,37 @@ test("profile downloads contain aggregate data and recommended filters download 
   assert.match(app.downloadLinks.at(-1).blob.parts.join(""), /source_row.*Customer ID/);
   assert.match(app.downloadLinks.at(-1).blob.parts.join(""), /"Newark"/);
   assert.doesNotMatch(app.downloadLinks.at(-1).blob.parts.join(""), /C1/);
+});
+
+test("synthetic reference preview stays separate from real uploads and never exports reference rows", async () => {
+  const app = await startDemo();
+  await app.elements.referenceAskAssistant.dispatch("click");
+  assert.equal(app.elements.assistantLauncher.clicked, true, "Ask DataCare remains reachable from the reference banner");
+  await app.elements.referenceDownloadClean.dispatch("click");
+  assert.equal(app.downloadLinks.length, 0);
+  assert.match(app.elements.referenceExportMessage.textContent, /No reference download was created/);
+
+  await app.elements.referenceChangeFile.dispatch("click");
+  assert.equal(app.elements.patientReferenceShell.hidden, true);
+  assert.equal(app.elements.realFileWorkspace.hidden, false);
+  assert.equal(app.elements.fileInput.clicked, true);
+
+  const csv = "Customer ID,Name\nC1,Sample";
+  const file = { name: "synthetic-handoff.csv", type: "text/csv", size: Buffer.byteLength(csv), async arrayBuffer() { const buffer = Buffer.from(csv); return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength); } };
+  await app.elements.fileInput.dispatch("change", { target: { files: [file], value: "selected" } });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(app.elements.patientReferenceShell.hidden, true);
+  assert.equal(app.elements.realFileWorkspace.hidden, false);
+  assert.equal(app.window.CdcDemoData.getCurrentDataset().sourceFileName, "synthetic-handoff.csv");
+});
+
+test("reference screen actions explain unsupported operations instead of changing sample data", async () => {
+  const app = await startDemo();
+  await app.elements.referenceApproveDate.dispatch("click");
+  assert.match(app.elements.referenceActionMessage.textContent, /does not transform sample records|date-format decision/);
+  await app.elements.referenceFollowup.dispatch("click");
+  assert.match(app.elements.reviewActionMessage.textContent, /does not create or export a record/);
+  app.elements.referenceCity.value = "Newark";
+  await app.elements.referenceAddCity.dispatch("click");
+  assert.match(app.elements.referenceCityResult.textContent, /no complete rows to count/);
 });

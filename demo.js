@@ -4,16 +4,128 @@
   const $ = (id) => document.getElementById(id);
   const TARGETS = CdcCore.canonicalTargets;
 
-  const state = { file: null, importContext: null, importTable: null, headers: [], rows: [], previewPage: 0, profile: null, mappings: {}, mappingRows: ["customer_id"], mappingSuggestions: {}, mappingSources: {}, filters: [], qualityFilter: "all", results: null, filteredResults: [], excludedResults: [], run: null, processing: false };
+  const state = { file: null, importContext: null, importTable: null, headers: [], rows: [], previewPage: 0, profile: null, mappings: {}, mappingRows: ["customer_id"], mappingSuggestions: {}, mappingSources: {}, filters: [], qualityFilter: "all", results: null, filteredResults: [], excludedResults: [], run: null, processing: false, approvedTransforms: [], reviewRecords: [], reviewIndex: 0, reviewDecisions: {} };
   let spreadsheetLibraryPromise = null;
   window.CdcDemoData = {
     getCurrentDataset() {
       return state.file ? { headers: [...state.headers], rows: state.rows.map((record) => [...record.values]), sourceFileName: state.file.name, format: state.importTable && state.importTable.detectedFormat, worksheet: state.importTable && state.importTable.selectedWorksheet } : null;
     },
-    getCurrentProfile() { return state.profile ? JSON.parse(JSON.stringify(state.profile)) : null; }
+    getCurrentProfile() { return state.profile ? JSON.parse(JSON.stringify(state.profile)) : null; },
+    getCurrentStage() {
+      if (state.currentStage === "check" && state.mappingSources.customer_id === "manual") return "mapping";
+      if (state.currentStage === "fix" && state.results) return "review";
+      return state.currentStage || "check";
+    }
   };
   const fileInput = $("fileInput");
   const dropZone = $("dropZone");
+
+  function setStage(stage) {
+    const allowed = stage === "check" || stage === "fix" && Boolean(state.file && state.profile) || stage === "export" && Boolean(state.results);
+    if (!allowed) return;
+    state.currentStage = stage;
+    $("checkStage").hidden = stage !== "check";
+    $("fixStage").hidden = stage !== "fix";
+    $("exportStage").hidden = stage !== "export";
+    [["stepCheck", "check"], ["stepFix", "fix"], ["stepExport", "export"]].forEach(([id, key]) => {
+      const button = $(id);
+      button.classList.toggle("active", key === stage);
+      button.disabled = key === "fix" ? !state.file || !state.profile : key === "export" ? !state.results : false;
+      if (key === stage) button.setAttribute("aria-current", "step"); else button.removeAttribute("aria-current");
+    });
+    window.dispatchEvent(new Event("cdc:stage-changed"));
+  }
+
+  $("stepCheck").addEventListener("click", () => setStage("check"));
+  $("stepFix").addEventListener("click", () => setStage("fix"));
+  $("stepExport").addEventListener("click", () => setStage("export"));
+  $("continueToFix").addEventListener("click", () => setStage("fix"));
+  $("continueToExport").addEventListener("click", () => setStage("export"));
+  setStage("check");
+  // Keep validation findings with Fix while source filters and exports live in Export.
+  $("fixStage").appendChild($("resultsSection"));
+
+  const referenceShell = $("patientReferenceShell");
+  const realFileWorkspace = $("realFileWorkspace");
+  const referenceElements = (selector) => referenceShell.querySelectorAll ? [...referenceShell.querySelectorAll(selector)] : [];
+  function showReferencePanel(name) {
+    referenceElements("[data-panel]").forEach((panel) => { panel.hidden = panel.dataset.panel !== name; });
+    referenceElements("[data-view]").forEach((button) => {
+      const active = button.dataset.view === name;
+      button.classList.toggle("current", active);
+      if (active) button.setAttribute("aria-current", "step"); else button.removeAttribute("aria-current");
+    });
+    if (referenceShell.scrollIntoView) referenceShell.scrollIntoView({ block: "start", behavior: "smooth" });
+  }
+  function openRealFileWorkspace() {
+    referenceShell.hidden = true;
+    realFileWorkspace.hidden = false;
+    document.body.classList.remove("reference-preview");
+    setStage("check");
+    const upload = $("uploadTitle");
+    if (upload && upload.scrollIntoView) upload.scrollIntoView({ block: "center", behavior: "smooth" });
+  }
+  $("referenceAskAssistant").addEventListener("click", () => $("assistantLauncher").click());
+  $("referenceChangeFile").addEventListener("click", () => { openRealFileWorkspace(); fileInput.click(); });
+  $("referenceChangeFileLink").addEventListener("click", () => { openRealFileWorkspace(); fileInput.click(); });
+  $("returnToReference").addEventListener("click", () => {
+    realFileWorkspace.hidden = true;
+    referenceShell.hidden = false;
+    document.body.classList.add("reference-preview");
+    referenceShell.scrollIntoView && referenceShell.scrollIntoView({ block: "start" });
+  });
+  referenceShell.addEventListener("click", (event) => {
+    const viewButton = event.target.closest("[data-view]");
+    if (viewButton) { showReferencePanel(viewButton.dataset.view); return; }
+    const action = event.target.closest("[data-go]");
+    if (action) {
+      if (action.dataset.go === "real-file") openRealFileWorkspace();
+      else showReferencePanel(action.dataset.go);
+      return;
+    }
+    const mapButton = event.target.closest("[data-reference-map]");
+    if (mapButton) {
+      $("referenceActionMessage").textContent = `“${mapButton.dataset.referenceMap}” is shown as a synthetic reference mapping. Upload a file to configure a real mapping.`;
+      return;
+    }
+    const issue = event.target.closest("[data-reference-issue]");
+    if (issue) $("referenceActionMessage").textContent = `${issue.dataset.referenceIssue} is illustrative in this reference screen. Upload a file to see findings derived from its values.`;
+  });
+  $("referenceApproveDate").addEventListener("click", () => {
+    $("referenceActionMessage").textContent = "Preview only: a date-format decision would need human approval. This synthetic screen changes no records; real-file date conversion is not implemented.";
+  });
+  $("referenceReviewOne").addEventListener("click", () => showReferencePanel("review"));
+  $("referenceFollowup").addEventListener("click", () => {
+    $("reviewActionMessage").textContent = "Reference preview only: the follow-up action is illustrated and does not create or export a record.";
+  });
+  $("referenceNextReview").addEventListener("click", () => showReferencePanel("fix"));
+  referenceElements("[data-review-answer]").forEach((button) => button.setAttribute("aria-pressed", "false"));
+  referenceElements("[data-review-answer]").forEach((button) => button.addEventListener("click", () => {
+    referenceElements("[data-review-answer]").forEach((candidate) => {
+      const selected = candidate === button;
+      candidate.classList.toggle("selected", selected);
+      candidate.setAttribute("aria-pressed", String(selected));
+    });
+    $("referenceApplyAnswer").disabled = false;
+    $("reviewActionMessage").textContent = `“${button.dataset.reviewAnswer}” selected for this synthetic reference only. No real record or global rule is changed.`;
+  }));
+  $("referenceApplyAnswer").addEventListener("click", () => {
+    $("reviewActionMessage").textContent = "Reference preview only: the selected answer illustrates a scoped review rule. It does not change records or create a global policy.";
+  });
+  $("referenceUndoGender").addEventListener("click", () => {
+    $("referenceActionMessage").textContent = "Reference preview only: Undo is shown to illustrate review history. No source or processed values were changed.";
+  });
+  $("referenceSeeDates").addEventListener("click", () => {
+    $("referenceActionMessage").textContent = "The design PDF provides five examples, not all 41 values. Upload a file to inspect its actual date values.";
+  });
+  ["referenceDownloadClean", "referenceDownloadFollowup", "referenceDownloadChanges"].forEach((id) => $(id).addEventListener("click", () => {
+    $("referenceExportMessage").textContent = "No reference download was created. Upload and process a file to download outputs based on your own data.";
+  }));
+  $("referenceAddCity").addEventListener("click", () => {
+    const city = $("referenceCity").value;
+    $("referenceCityResult").textContent = city ? `${city} is a sample filter choice; this reference contains no complete rows to count. Upload a file for data-derived filtering.` : "Choose a city first.";
+  });
+  showReferencePanel("check");
 
   function ensureSpreadsheetLibrary() {
     if (window.XLSX) return Promise.resolve(window.XLSX);
@@ -30,9 +142,11 @@
   }
 
   function clearCurrentDataset() {
-    state.file = null; state.importContext = null; state.importTable = null; state.headers = []; state.rows = []; state.previewPage = 0; state.profile = null; state.mappings = {}; state.mappingRows = ["customer_id"]; state.mappingSuggestions = {}; state.mappingSources = {}; state.filters = []; state.qualityFilter = "all"; state.results = null; state.filteredResults = []; state.excludedResults = []; state.run = null; state.processing = false;
+    state.file = null; state.importContext = null; state.importTable = null; state.headers = []; state.rows = []; state.previewPage = 0; state.profile = null; state.mappings = {}; state.mappingRows = ["customer_id"]; state.mappingSuggestions = {}; state.mappingSources = {}; state.filters = []; state.qualityFilter = "all"; state.results = null; state.filteredResults = []; state.excludedResults = []; state.run = null; state.processing = false; state.approvedTransforms = []; state.reviewRecords = []; state.reviewIndex = 0; state.reviewDecisions = {};
     $("profileActions").hidden = true;
     $("previewSection").hidden = true; $("profileSection").hidden = true; $("mappingSection").hidden = true; $("filterSection").hidden = true; $("resultsSection").hidden = true;
+    $("reviewOneByOne").hidden = true; $("continueToExport").disabled = true;
+    setStage("check");
     $("importOptions").hidden = true; $("worksheetControl").hidden = true; $("delimiterControl").hidden = true; $("importWarnings").hidden = true;
     window.dispatchEvent(new Event("cdc:dataset-changed"));
   }
@@ -109,11 +223,14 @@
     $("headerRowInput").value = String(opened.table.headerRow);
   }
   function applyImportedTable(table) {
+    $("patientReferenceShell").hidden = true;
+    $("realFileWorkspace").hidden = false;
+    document.body.classList.remove("reference-preview");
     state.importTable = table;
     state.headers = [...table.headers];
     state.rows = table.rows.map((values, index) => ({ rowNumber: table.sourceRows[index], values }));
     state.profile = null; state.previewPage = 0; state.mappings = {}; state.mappingRows = ["customer_id"]; state.mappingSuggestions = {}; state.mappingSources = {}; state.filters = []; state.qualityFilter = "all";
-    state.results = null; state.filteredResults = []; state.excludedResults = []; state.run = null;
+    state.results = null; state.filteredResults = []; state.excludedResults = []; state.run = null; state.approvedTransforms = []; state.reviewRecords = []; state.reviewIndex = 0; state.reviewDecisions = {};
     $("previewSection").hidden = false; $("profileSection").hidden = false; $("mappingSection").hidden = true; $("filterSection").hidden = true; $("resultsSection").hidden = true;
     window.dispatchEvent(new Event("cdc:dataset-changed"));
     const sheet = table.selectedWorksheet ? ` · Worksheet: ${table.selectedWorksheet}` : "";
@@ -214,18 +331,48 @@
   }
   function renderProfileKpis() {
     const profile = state.profile;
-    const values = [
-      ["Total records", profile.metadata.row_count.toLocaleString(), "Parsed data rows"],
-      ["Total columns", profile.metadata.column_count.toLocaleString(), "Source fields"],
-      ["Blank cells", profile.counts.blank_cells.toLocaleString(), "Blank or whitespace-only values"],
-      ["Potential duplicate ID rows", profile.counts.potential_duplicate_identifier_records == null ? "Requires mapping" : profile.counts.potential_duplicate_identifier_records.toLocaleString(), "Candidate only; confirm Customer ID"],
-      ["Missing Customer ID", profile.counts.missing_customer_id_records == null ? "Requires mapping" : profile.counts.missing_customer_id_records.toLocaleString(), "BRD-required field; candidate mapping only"],
-      ["Records requiring review", profile.counts.records_requiring_review == null ? "Requires validation" : profile.counts.records_requiring_review.toLocaleString(), "Profile is not a validation decision"]
-    ];
+    const candidates = transformCandidates();
+    const ready = state.results ? state.results.filter((record) => record.status === "valid").length : null;
+    const fixed = state.results ? state.results.filter((record) => record.changes.length).length : candidates.rows.size;
+    const review = state.results ? state.results.filter((record) => record.status === "needs_review").length : null;
+    const blocked = state.results ? state.results.filter((record) => record.status === "invalid").length : null;
+    const values = [["Ready", ready == null ? "—" : ready.toLocaleString(), ready == null ? "Run review to calculate" : "Pass current demo checks"], ["We can fix", fixed.toLocaleString(), state.results ? "Records with approved formatting changes" : "Formatting candidates; approval required"], ["Needs your eye", review == null ? "—" : review.toLocaleString(), review == null ? "Run review to calculate" : "Records with review findings"], ["Can't fix here", blocked == null ? "—" : blocked.toLocaleString(), blocked == null ? "Run review to calculate" : "Blocking records remain in follow-up"]];
     const container = $("profileResults"); container.replaceChildren();
-    const grid = document.createElement("div"); grid.className = "profile-kpis";
-    values.forEach(([label, value, note]) => { const card = document.createElement("article"); card.className = "profile-kpi"; card.append(textNode("span", label), textNode("b", value), textNode("small", note)); grid.appendChild(card); });
+    container.appendChild(textNode("p", `${profile.metadata.row_count.toLocaleString()} records · ${profile.metadata.column_count.toLocaleString()} columns`, "dataset-totals"));
+    const grid = document.createElement("div"); grid.className = "health-cards";
+    values.forEach(([label, value, note], index) => { const card = document.createElement("article"); card.className = `health-card health-${["ready", "fix", "review", "blocked"][index]}`; card.append(textNode("span", label), textNode("b", value), textNode("small", note)); grid.appendChild(card); });
     container.appendChild(grid);
+    const total = state.results ? state.results.length : 0;
+    const segments = document.createElement("div"); segments.className = "health-bar"; segments.setAttribute("role", "img");
+    if (total) {
+      const counts = [ready, review, blocked];
+      const colors = ["#16845b", "#b7791f", "#b42332"];
+      segments.setAttribute("aria-label", `Results: ${ready} ready, ${review} need review, ${blocked} blocked; ${fixed} records have approved changes.`);
+      counts.forEach((count, index) => { const segment = document.createElement("span"); segment.className = "health-segment"; segment.setAttribute("style", `width:${Math.max(0, count || 0) / total * 100}%;background:${colors[index]}`); segments.appendChild(segment); });
+    } else {
+      segments.setAttribute("aria-label", "Run checks to see the data health summary.");
+      const segment = document.createElement("span"); segment.className = "health-segment health-pending"; segments.appendChild(segment);
+    }
+    container.append(segments, textNode("h3", "What we found"));
+    const findings = document.createElement("div"); findings.className = "finding-list";
+    const sourceFindings = [...profile.columns].filter((column) => column.missing_count > 0).sort((a, b) => b.missing_count - a.missing_count || a.name.localeCompare(b.name)).slice(0, 5);
+    if (state.results) {
+      const groups = new Map();
+      state.results.flatMap((record) => [...record.errors, ...record.warnings].map((issue) => ({ record, issue }))).forEach(({ record, issue }) => {
+        const key = `${issue.code}:${issue.field}`; const item = groups.get(key) || { issue, records: [] }; item.records.push(record.rowNumber); groups.set(key, item);
+      });
+      if (groups.size) groups.forEach(({ issue, records }) => {
+        const item = document.createElement("article"); item.className = `finding-item ${issue.severity === "blocking" ? "finding-blocking" : "finding-review"}`;
+        item.append(textNode("strong", issue.message), textNode("span", `${records.length.toLocaleString()} record${records.length === 1 ? "" : "s"} · ${issue.field || issue.code}`)); findings.appendChild(item);
+      });
+      if (!groups.size) findings.appendChild(textNode("p", "No findings were raised by the current demo checks.", "empty-state"));
+    } else {
+      if (profile.counts.missing_customer_id_records > 0) findings.appendChild(findingCard(`${profile.counts.missing_customer_id_records} potential missing Customer ID row(s)`, "Based on the suggested ID column; confirm the mapping before treating this as a validation result.", "finding-review"));
+      if (profile.counts.potential_duplicate_identifier_records > 0) findings.appendChild(findingCard(`${profile.counts.potential_duplicate_identifier_records} potential duplicate ID row(s)`, "Candidate only until you confirm the Customer ID mapping.", "finding-review"));
+      sourceFindings.forEach((column) => findings.appendChild(findingCard(`${column.missing_count.toLocaleString()} blank value(s) in ${column.name}`, "Observed missingness; this source field is not assumed mandatory.", "finding-neutral")));
+      if (!findings.children.length) findings.appendChild(textNode("p", "No profile observations were found. Confirm the required record ID mapping to run validation.", "empty-state"));
+    }
+    container.appendChild(findings);
     const priorities = [...profile.columns].sort((a, b) => b.missing_count - a.missing_count || a.name.localeCompare(b.name)).filter((column) => column.missing_count > 0).slice(0, 5);
     const shown = priorities.length ? priorities : profile.columns.slice(0, 5);
     const table = document.createElement("div"); table.className = "profile-priority-table";
@@ -234,6 +381,51 @@
     container.appendChild(table);
     $("columnQualityTitle").textContent = `View all columns (${profile.columns.length})`;
     renderColumnQuality();
+  }
+  function findingCard(title, note, className) {
+    const card = document.createElement("article"); card.className = `finding-item ${className}`; card.append(textNode("strong", title), textNode("span", note)); return card;
+  }
+  function transformCandidates() {
+    let whitespace = 0, emailCase = 0; const rows = new Set();
+    Object.entries(state.mappings).forEach(([target, header]) => {
+      const index = state.headers.indexOf(header); if (index < 0) return;
+      state.rows.forEach((record) => {
+        const original = String(record.values[index] == null ? "" : record.values[index]);
+        if (original !== original.trim()) { whitespace++; rows.add(record.rowNumber); }
+        if (target === "email" && original.trim() !== original.trim().toLowerCase()) { emailCase++; rows.add(record.rowNumber); }
+      });
+    });
+    return { whitespace, emailCase, rows };
+  }
+  function renderFixApprovals() {
+    const container = $("fixApprovalList"); container.replaceChildren();
+    const counts = transformCandidates();
+    container.appendChild(textNode("p", "The following are exact formatting-only previews from mapped source cells. Nothing is changed until you select a rule and apply it.", "section-copy"));
+    const candidates = [
+      { key: "whitespace_trim", count: counts.whitespace, title: "Trim surrounding whitespace", detail: "Removes spaces at the start or end of mapped values." },
+      { key: "email_lowercase", count: counts.emailCase, title: "Lowercase email letters", detail: "Changes letter case only; it does not correct or verify an email address." }
+    ];
+    candidates.forEach((candidate) => {
+      if (!candidate.count) return;
+      const label = document.createElement("label"); label.className = "fix-approval-option";
+      const input = document.createElement("input"); input.type = "checkbox"; input.checked = state.approvedTransforms.includes(candidate.key);
+      input.addEventListener("change", () => {
+        state.approvedTransforms = input.checked ? [...new Set([...state.approvedTransforms, candidate.key])] : state.approvedTransforms.filter((key) => key !== candidate.key);
+      });
+      label.append(input, textNode("span", `${candidate.title} · ${candidate.count.toLocaleString()} cell${candidate.count === 1 ? "" : "s"}`), textNode("small", candidate.detail));
+      container.appendChild(label);
+      const preview = document.createElement("details"); preview.className = "fix-preview"; preview.appendChild(textNode("summary", "Preview source and proposed values"));
+      const previewRows = [];
+      state.rows.forEach((record) => Object.entries(state.mappings).forEach(([target, header]) => {
+        if (candidate.key === "email_lowercase" && target !== "email") return;
+        const index = state.headers.indexOf(header); if (index < 0) return;
+        const before = String(record.values[index] == null ? "" : record.values[index]);
+        const after = candidate.key === "whitespace_trim" ? before.trim() : before.trim().toLowerCase();
+        if (before !== after) previewRows.push([record.rowNumber, header, before, after]);
+      }));
+      const table = document.createElement("div"); buildTable(table, ["Source row", "Column", "Original value", "Proposed value"], previewRows, 5); preview.appendChild(table); container.appendChild(preview);
+    });
+    if (!counts.whitespace && !counts.emailCase) container.appendChild(textNode("p", "No supported formatting changes were found in the mapped columns. Validation can still identify rows that need review.", "empty-state"));
   }
   function renderColumnQuality() {
     if (!state.profile) return;
@@ -385,7 +577,8 @@
     const available = TARGETS.filter((target) => !target.required && !state.mappingRows.includes(target.key));
     $("addMapping").disabled = available.length === 0;
     $("addHighConfidenceMappings").disabled = !TARGETS.some((target) => !target.required && state.mappingSuggestions[target.key]?.recommendable && state.mappingSuggestions[target.key]?.confidence === "high" && !state.mappingRows.includes(target.key));
-    populateFilterColumns(); renderMappingRecommendations(); updateMappingSummary(); updateMappingStatus();
+    populateFilterColumns(); renderMappingRecommendations(); updateMappingSummary(); updateMappingStatus(); renderFixApprovals();
+    window.dispatchEvent(new Event("cdc:stage-changed"));
   }
   function updateMappingSummary() {
     const confirmed = state.mappingRows.filter((key) => state.mappingSources[key] === "manual" && state.mappings[key]).length;
@@ -401,6 +594,7 @@
     const explicitlyConfirmed = state.mappingSources.customer_id === "manual";
     const enabled = readiness.enabled && explicitlyConfirmed;
     $("cleanButton").disabled = !enabled;
+    $("continueToFix").disabled = !enabled;
     $("mappingStatus").textContent = enabled
       ? "Customer ID mapping is confirmed. Optional fields may remain unmapped."
       : readiness.enabled && !explicitlyConfirmed ? "Review and explicitly confirm the Customer ID mapping before processing." : readiness.reason;
@@ -418,18 +612,21 @@
       return;
     }
     state.processing = true;
+    setStage("fix");
     updateMappingStatus();
     $("mappingStatus").textContent = "Processing uploaded records locally: normalization → validation → exceptions → filtered results…";
     $("resultStatus").textContent = "Processing locally…";
     let processingMessage = "";
     try {
-      state.results = CdcCore.processRows(state.headers, state.rows.map((record) => record.values), state.mappings, state.rows.map((record) => record.rowNumber));
+      state.results = CdcCore.processRows(state.headers, state.rows.map((record) => record.values), state.mappings, state.rows.map((record) => record.rowNumber), { approvedTransforms: state.approvedTransforms });
       const selected = CdcCore.filterRecords(state.results, state.filters, state.qualityFilter);
       state.filteredResults = selected.matched;
       state.excludedResults = selected.excluded;
       state.run = { id: makeRunId(), timestamp: new Date().toISOString() };
       renderResults();
+      window.dispatchEvent(new Event("cdc:stage-changed"));
       $("resultsSection").hidden = false;
+      $("continueToExport").disabled = false;
       $("resultsSection").scrollIntoView({ behavior: "smooth", block: "start" });
       processingMessage = "Processing completed locally. Source values were retained; inspect the status and reports before using outputs.";
     } catch (error) {
@@ -467,6 +664,13 @@
     buildTable($("exceptionPane"), exceptionReport.headers, exceptionReport.rows);
     const changeRows = modified.flatMap((record) => record.changes.map((change) => [record.rowNumber, change.sourceField, change.target, change.rule, change.before, change.after]));
     buildTable($("changesPane"), ["source_row", "source_field", "canonical_field", "normalization_rule", "original_value", "normalized_value"], changeRows);
+    $("fixStatus").textContent = `${valid.length.toLocaleString()} pass current checks · ${review.length.toLocaleString()} need review · ${invalid.length.toLocaleString()} blocked · ${modified.length.toLocaleString()} records changed under approved formatting rules.`;
+    $("exportSummary").textContent = `${results.length.toLocaleString()} records checked · ${valid.length.toLocaleString()} eligible in this demo · ${exceptions.length.toLocaleString()} records in follow-up · ${modified.length.toLocaleString()} records have approved changes. Nothing is imported.`;
+    buildTable($("recentChanges"), ["Source row", "Source field", "Change", "Original", "Result"], changeRows.slice(0, 8).map((row) => [row[0], row[1], row[3], row[4], row[5]]), 8);
+    state.reviewRecords = exceptions;
+    state.reviewIndex = 0;
+    renderFocusedReview();
+    $("reviewOneByOne").hidden = exceptions.length === 0;
     const filteredValid = state.filteredResults.filter((record) => record.status === "valid").length;
     const filteredReview = state.filteredResults.filter((record) => record.status === "needs_review").length;
     const filteredInvalid = state.filteredResults.filter((record) => record.status === "invalid").length;
@@ -479,6 +683,38 @@
       state.profile.validation_observed = true;
       renderProfile();
     }
+  }
+
+  function renderFocusedReview() {
+    const item = state.reviewRecords[state.reviewIndex];
+    const panel = $("reviewRecord"); panel.replaceChildren();
+    if (!item) { panel.appendChild(textNode("p", "There are no records requiring follow-up.", "empty-state")); $("reviewProgress").textContent = "Review complete"; return; }
+    const issues = [...item.errors, ...item.warnings];
+    $("reviewProgress").textContent = `Record ${state.reviewIndex + 1} of ${state.reviewRecords.length} · source row ${item.rowNumber}`;
+    const heading = document.createElement("div"); heading.className = "review-issue";
+    heading.append(textNode("strong", issues.map((issue) => issue.message).join(" ")), textNode("span", issues.map((issue) => `${issue.code} · ${issue.severity}`).join(" · ")));
+    panel.appendChild(heading);
+    const values = document.createElement("dl"); values.className = "review-values";
+    issues.forEach((issue) => {
+      const target = TARGETS.find((field) => field.key === issue.field);
+      const source = target && state.mappings[target.key];
+      const sourceIndex = state.headers.indexOf(source);
+      const term = textNode("dt", source || target?.label || issue.field || "Affected field");
+      const value = textNode("dd", sourceIndex >= 0 ? item.values[sourceIndex] : "No mapped source value");
+      values.append(term, value);
+    });
+    const context = document.createElement("details"); context.appendChild(textNode("summary", "View mapped record context"));
+    const contextTable = document.createElement("div");
+    const selected = TARGETS.filter((target) => state.mappings[target.key]);
+    buildTable(contextTable, ["Canonical field", "Source column", "Original value"], selected.map((target) => [target.label, state.mappings[target.key], item.values[state.headers.indexOf(state.mappings[target.key])]]), 20);
+    context.appendChild(contextTable); panel.append(values, context);
+    const decision = state.reviewDecisions[item.rowNumber];
+    if (decision) panel.appendChild(textNode("p", decision === "follow_up" ? "Added to follow-up. Source values remain unchanged." : "Left unchanged. Source values remain unchanged.", "caption"));
+  }
+  function decideReview(decision) {
+    const item = state.reviewRecords[state.reviewIndex]; if (!item) return;
+    state.reviewDecisions[item.rowNumber] = decision;
+    renderFocusedReview();
   }
 
   function downloadCsv(filename, headers, rows) {
@@ -582,7 +818,16 @@
   }
   function downloadExceptions() {
     const report = CdcCore.exceptionReport(state.results || [], state.headers);
+    report.rows = report.rows.map((row) => [
+      ...row.slice(0, 5),
+      state.reviewDecisions[row[0]] === "follow_up" ? "added_to_follow_up" : state.reviewDecisions[row[0]] === "unchanged" ? "reviewed_left_unchanged" : row[5],
+      ...row.slice(6)
+    ]);
     downloadCsv(outputFileNames().exception_report, report.headers, report.rows);
+  }
+  function downloadChangeLog() {
+    const rows = (state.results || []).flatMap((record) => record.changes.map((change) => [state.run.id, record.rowNumber, change.sourceField, change.target, change.rule, change.before, change.after, "Approved in this page session"]));
+    downloadCsv("approved_change_log.csv", ["run_id", "source_row", "source_field", "canonical_field", "rule", "original_value", "resulting_value", "approval"], rows);
   }
   function mappingDecisionArtifacts() {
     return Object.fromEntries(TARGETS.map((target) => {
@@ -621,6 +866,8 @@
     summary.header_row = state.importTable.headerRow;
     summary.import_warnings = [...state.importTable.warnings];
     summary.applied_delimiter = state.importTable.delimiter || null;
+    summary.normalization_rules = [...state.approvedTransforms];
+    summary.normalization_approval = state.approvedTransforms.length ? "User-approved in this browser session" : "No formatting changes approved";
     downloadText(outputFileNames().processing_summary, `${JSON.stringify(summary, null, 2)}\n`, "application/json;charset=utf-8");
   }
 
@@ -639,6 +886,11 @@
       const validation = CdcCore.validationReport(state.results || [], state.filteredResults || []);
       addSheet("Validation Report", validation.headers, validation.rows);
       const exceptions = CdcCore.exceptionReport(state.results || [], state.headers);
+      exceptions.rows = exceptions.rows.map((row) => [
+        ...row.slice(0, 5),
+        state.reviewDecisions[row[0]] === "follow_up" ? "added_to_follow_up" : state.reviewDecisions[row[0]] === "unchanged" ? "reviewed_left_unchanged" : row[5],
+        ...row.slice(6)
+      ]);
       if (exceptions.rows.length) addSheet("Exceptions", exceptions.headers, exceptions.rows);
       const summary = CdcCore.processingSummary({
         runId: state.run.id, timestamp: state.run.timestamp, sourceFileName: state.file.name,
@@ -651,6 +903,8 @@
       summary.selected_worksheet = state.importTable.selectedWorksheet || null;
       summary.header_row = state.importTable.headerRow;
       summary.import_warnings = [...state.importTable.warnings];
+      summary.normalization_rules = [...state.approvedTransforms];
+      summary.normalization_approval = state.approvedTransforms.length ? "User-approved in this browser session" : "No formatting changes approved";
       const summaryRows = [["Property", "Value"], ...Object.entries(summary).map(([key, value]) => [key, typeof value === "object" ? JSON.stringify(value) : String(value)])];
       XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(summaryRows), "Processing Summary");
       const bytes = XLSX.write(workbook, { bookType: "xlsx", type: "array", compression: true });
@@ -762,11 +1016,15 @@
     });
   });
   $("cleanButton").addEventListener("click", cleanAndValidate);
+  $("reviewLeaveUnchanged").addEventListener("click", () => decideReview("unchanged"));
+  $("reviewFollowUp").addEventListener("click", () => decideReview("follow_up"));
+  $("reviewNext").addEventListener("click", () => { if (state.reviewIndex < state.reviewRecords.length - 1) state.reviewIndex++; renderFocusedReview(); });
   $("downloadClean").addEventListener("click", downloadClean);
   $("downloadFiltered").addEventListener("click", downloadFiltered);
   $("downloadValidation").addEventListener("click", () => downloadValidation(false));
   $("downloadFilteredValidation").addEventListener("click", () => downloadValidation(true));
   $("downloadExceptions").addEventListener("click", downloadExceptions);
+  $("downloadChangeLog").addEventListener("click", downloadChangeLog);
   $("downloadSummary").addEventListener("click", downloadSummary);
   $("downloadXlsx").addEventListener("click", downloadWorkbook);
   $("filterColumn").addEventListener("change", () => { $("filterValue").focus(); });

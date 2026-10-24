@@ -77,6 +77,20 @@ test("preserves original cells while recording whitespace and email-case transfo
   assert.equal(result[0].errors.length, 0);
 });
 
+test("UI-approved normalization changes are opt-in and defaults preserve source formatting", () => {
+  const input = [[" C1 ", " PERSON@EXAMPLE.TEST "]];
+  const mappings = { customer_id: "ID", email: "Email" };
+  const held = core.processRows(["ID", "Email"], input, mappings, [2], { approvedTransforms: [] });
+  assert.equal(held[0].canonical.customer_id, " C1 ");
+  assert.equal(held[0].canonical.email, " PERSON@EXAMPLE.TEST ");
+  assert.deepEqual(held[0].changes, []);
+  const approved = core.processRows(["ID", "Email"], input, mappings, [2], { approvedTransforms: ["whitespace_trim", "email_lowercase"] });
+  assert.equal(approved[0].canonical.customer_id, "C1");
+  assert.equal(approved[0].canonical.email, "person@example.test");
+  assert.deepEqual(approved[0].changes.map((change) => change.rule), ["whitespace trimming", "whitespace trimming", "email casing normalization"]);
+  assert.deepEqual(approved[0].values, input[0], "original source values remain available");
+});
+
 test("does not use fuzzy names to mark records as duplicates", () => {
   const result = core.processRows(["ID", "Name"], [["C1", "Alex Kim"], ["C2", "Alex Kim"]], { customer_id: "ID", full_name: "Name" });
   assert.deepEqual(result.map((row) => row.errors), [[], []]);

@@ -187,23 +187,25 @@
     if (mismatched !== -1) throw new Error(`Data row ${mismatched + 2} has ${body[mismatched].length} columns; the header has ${headers.length}. No rows were dropped.`);
     return { delimiter, headers, rows: body, sourceRows: sourceLines.slice(1) };
   }
-  function processRows(headers, rows, mappings, sourceRowNumbers = []) {
+  function processRows(headers, rows, mappings, sourceRowNumbers = [], options = null) {
     const mappingCheck = validateMappings(headers, mappings);
     if (!mappingCheck.valid) throw new Error(mappingCheck.errors.map((error) => error.message).join(" "));
-    const idIndex = headers.indexOf(mappings.customer_id);
+    const approvedTransforms = options && Array.isArray(options.approvedTransforms) ? new Set(options.approvedTransforms) : null;
     const selected = Object.entries(mappings).filter(([, column]) => column).map(([key, column]) => [key, headers.indexOf(column)]);
     const results = rows.map((values, index) => {
       const canonical = {}, changes = [], errors = [], warnings = [];
       selected.forEach(([target, sourceIndex]) => {
         const original = values[sourceIndex];
-        const trimmed = original.trim();
-        const cleaned = target === "email" ? trimmed.toLowerCase() : trimmed;
+        const shouldTrim = approvedTransforms === null || approvedTransforms.has("whitespace_trim");
+        const trimmed = shouldTrim ? original.trim() : original;
+        const shouldNormalizeEmail = target === "email" && (approvedTransforms === null || approvedTransforms.has("email_lowercase"));
+        const cleaned = shouldNormalizeEmail ? trimmed.toLowerCase() : trimmed;
         canonical[target] = cleaned;
         if (trimmed !== original) changes.push({ sourceField: headers[sourceIndex], target, before: original, after: trimmed, rule: "whitespace trimming", reviewRequired: false });
         if (target === "email" && cleaned !== trimmed) changes.push({ sourceField: headers[sourceIndex], target, before: trimmed, after: cleaned, rule: "email casing normalization", reviewRequired: false });
       });
       const rowNumber = sourceRowNumbers[index] || index + 2;
-      if (!canonical.customer_id) errors.push({ code: "BR-01", category: "missing_required", severity: "blocking", field: "customer_id", message: "Customer ID is missing or blank.", recommendedAction: "Provide a customer identifier and reprocess the corrected CSV." });
+      if (!String(canonical.customer_id == null ? "" : canonical.customer_id).trim()) errors.push({ code: "BR-01", category: "missing_required", severity: "blocking", field: "customer_id", message: "Customer ID is missing or blank.", recommendedAction: "Provide a customer identifier and reprocess the corrected CSV." });
       if (canonical.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(canonical.email)) {
         warnings.push({ code: "BR-04", category: "format_review", severity: "review", field: "email", message: "Email does not match the demo's basic email pattern. The format policy is not approved; confirm or correct it before downstream use.", recommendedAction: "Review the email value and confirm the applicable format policy." });
       }
@@ -219,7 +221,7 @@
     });
     const groups = new Map();
     results.forEach((record) => {
-      const id = record.canonical.customer_id;
+      const id = String(record.canonical.customer_id == null ? "" : record.canonical.customer_id).trim();
       if (!id) return;
       const group = groups.get(id) || []; group.push(record); groups.set(id, group);
     });
